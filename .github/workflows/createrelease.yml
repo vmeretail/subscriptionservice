@@ -29,18 +29,6 @@ jobs:
       run: |
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
         dotnet test "test\SubscriptionService.Tests\SubscriptionService.Tests.csproj"
-        
-    #- name: Build Docker Images 
-    #  run: |
-    #    docker build . --file SubscriptionService/Dockerfile --tag subscriptionservice:latest
-    
-    #- name: Run Integration Tests
-    #  run: dotnet test "test\SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj"
-
-    #- name: Publish Images to Docker Hub
-    #  run: |
-    #    docker login --username=${{ secrets.DOCKER_USERNAME }} --password=${{ secrets.DOCKER_PASSWORD }}
-    #    docker push reponame/subscriptionservice:latest
            
     #- name: Build and Publish Nuget Packages
     #  run: |
