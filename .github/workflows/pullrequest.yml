@@ -1,0 +1,36 @@
+name: Build and Test Pull Requests
+
+on:
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  build:
+    name: "Build and Test Pull Requests"
+    env:
+        ASPNETCORE_ENVIRONMENT: "Production"
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.100
+
+    - name: Restore Nuget Packages
+      run: dotnet restore SubscriptionService.sln --source https://api.nuget.org/v3/index.json
+
+    - name: Build Code
+      run: dotnet build SubscriptionService.sln --configuration Release
+
+    - name: Run Unit Tests
+      run: |
+        echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
+        dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"

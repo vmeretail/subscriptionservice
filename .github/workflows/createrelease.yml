@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: "Release"
+    env:
+        ASPNETCORE_ENVIRONMENT: "Production"
+
+    runs-on: ubuntu-16.04
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.100
+
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+    - name: Restore Nuget Packages
+      run: dotnet restore SubscriptionService.sln --source https://api.nuget.org/v3/index.json
+
+    - name: Build Code
+      run: dotnet build SubscriptionService.sln --configuration Release
+
+    - name: Run Unit Tests
+      run: |
+        echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
+        dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
+           
+    #- name: Build and Publish Nuget Packages
+    #  run: |
+    #    dotnet pack "src/SubscriptionService\SubscriptionService.csproj" /p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output Nugets
+    #    dotnet nuget push Nugets/SubscriptionService.${{ steps.get_version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGETKEY }} --source nuget.org
