@@ -33,7 +33,7 @@ jobs:
     - name: Run Unit Tests
       run: |
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
-        dotnet test "test\SubscriptionService.Tests\SubscriptionService.Tests.csproj"
+        dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
            
     #- name: Build and Publish Nuget Packages
     #  run: |
