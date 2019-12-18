@@ -34,12 +34,7 @@
         /// The event store connection
         /// </summary>
         private readonly IEventStoreConnection EventStoreConnection;
-
-        /// <summary>
-        /// The HTTP client
-        /// </summary>
-        private readonly HttpClient HttpClient;
-
+        
         /// <summary>
         /// The lock object
         /// </summary>
@@ -79,20 +74,10 @@
             this.EventStoreConnection.Closed += this.EventStoreConnection_Closed;
             this.EventStoreConnection.Reconnecting += this.EventStoreConnection_Reconnecting;
             this.EventStoreConnection.ErrorOccurred += this.EventStoreConnection_ErrorOccurred;
-            this.EventStoreConnection.AuthenticationFailed += this.EventStoreConnection_AuthenticationFailed;
             this.EventStoreConnection.Disconnected += this.EventStoreConnection_Disconnected;
 
             // Cache the user credentials
             this.DefaultUserCredentials = new UserCredentials(username, password);
-
-            // Default value at the moment less than the default Event Store Retry of 10 seconds
-            Int32 httpRequestTimeout = 8;
-
-            // Create our Http Client to publish the message to the consumer endpoint
-            this.HttpClient = new HttpClient();
-            this.HttpClient.Timeout = TimeSpan.FromSeconds(httpRequestTimeout);
-            this.HttpClient.DefaultRequestHeaders.Accept.Clear();
-            this.HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
         #endregion
@@ -277,17 +262,6 @@
         }
 
         /// <summary>
-        /// Handles the AuthenticationFailed event of the EventStoreConnection control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="ClientAuthenticationFailedEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_AuthenticationFailed(Object sender,
-                                                               ClientAuthenticationFailedEventArgs e)
-        {
-            this.Trace($"Connection {e.Connection.ConnectionName} AuthenticationFailed, Reason {e.Reason}");
-        }
-
-        /// <summary>
         /// Handles the Closed event of the EventStoreConnection control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -399,28 +373,39 @@
 
             try
             {
-                using(HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url))
+                // hardcoded at the moment
+                Int32 httpRequestTimeout = 8;
+
+                // Create our Http Client to publish the message to the consumer endpoint
+                using (var httpClient = new HttpClient())
                 {
-                    request.Content = new StringContent(content, Encoding.UTF8, "application/json");
+                    httpClient.Timeout = TimeSpan.FromSeconds(httpRequestTimeout);
+                    httpClient.DefaultRequestHeaders.Accept.Clear();
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                    this.Trace($"About to Send Event Id {eventId}");
-
-                    using(HttpResponseMessage responseMessage = await this.HttpClient.SendAsync(request, cancellationToken))
+                    using(HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url))
                     {
-                        if (!responseMessage.IsSuccessStatusCode)
+                        request.Content = new StringContent(content, Encoding.UTF8, "application/json");
+
+                        this.Trace($"About to Send Event Id {eventId}");
+
+                        using(HttpResponseMessage responseMessage = await httpClient.SendAsync(request, cancellationToken))
                         {
-                            String responseBody = await responseMessage.Content.ReadAsStringAsync();
-                            HttpStatusCode statusCode = responseMessage.StatusCode;
+                            if (!responseMessage.IsSuccessStatusCode)
+                            {
+                                String responseBody = await responseMessage.Content.ReadAsStringAsync();
+                                HttpStatusCode statusCode = responseMessage.StatusCode;
 
-                            //We create a nicely formatted string for our Exception, showing the HTTP Status Code and any response body.
-                            //At this stage, we have decided to add this message to the CommunicationFailureException and Inner Exception.
-                            String errorMessage = $"Request failed [{statusCode}]. Response [{responseBody}]";
+                                //We create a nicely formatted string for our Exception, showing the HTTP Status Code and any response body.
+                                //At this stage, we have decided to add this message to the CommunicationFailureException and Inner Exception.
+                                String errorMessage = $"Request failed [{statusCode}]. Response [{responseBody}]";
 
-                            throw new Exception(errorMessage);
+                                throw new Exception(errorMessage);
+                            }
                         }
-                    }
 
-                    this.Trace($"Finished Sending Event Id {eventId}");
+                        this.Trace($"Finished Sending Event Id {eventId}");
+                    }
                 }
             }
             catch(Exception e)
