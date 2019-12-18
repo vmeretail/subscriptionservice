@@ -25,7 +25,7 @@ jobs:
     - name: Run Unit Tests
       run: |
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
-        dotnet test "EstateManagement.BusinessLogic.Tests\EstateManagement.BusinessLogic.Tests.csproj"
+        dotnet test "test/SubscriptionService.Tests\SubscriptionService.Tests.csproj"
     
     #- name: Build Docker Image
     #  run: docker build . --file SubscriptionService/Dockerfile --tag subscriptionservice:latest
