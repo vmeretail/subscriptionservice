@@ -26,9 +26,3 @@ jobs:
       run: |
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
         dotnet test "test/SubscriptionService.Tests\SubscriptionService.Tests.csproj"
-    
-    #- name: Build Docker Image
-    #  run: docker build . --file SubscriptionService/Dockerfile --tag subscriptionservice:latest
-            
-    # - name: Run Integration Tests
-    #   run: dotnet test "SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj" --filter Category=PRTest
