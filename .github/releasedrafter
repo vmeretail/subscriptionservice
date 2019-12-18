@@ -1,0 +1,13 @@
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'      
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+  - title: '🧰 Maintenance'
+    label: 'maintenance'
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+template: |
+  ## Changes
+  $CHANGES
