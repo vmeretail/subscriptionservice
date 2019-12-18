@@ -3,14 +3,13 @@
     using System;
 
     /// <summary>
-    /// 
     /// </summary>
     public class Subscription
     {
         #region Constructors
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Subscription"/> class.
+        /// Initializes a new instance of the <see cref="Subscription" /> class.
         /// </summary>
         /// <param name="streamName">Name of the stream.</param>
         /// <param name="groupName">Name of the group.</param>
@@ -19,6 +18,16 @@
                              String groupName,
                              String endPointUrl)
         {
+            if (String.IsNullOrWhiteSpace(streamName))
+            {
+                throw new ArgumentException("Value cannot be null or empty", nameof(streamName));
+            }
+
+            if (String.IsNullOrWhiteSpace(groupName))
+            {
+                throw new ArgumentException("Value cannot be null or empty", nameof(groupName));
+            }
+
             this.StreamName = streamName;
             this.GroupName = groupName;
             this.EndPointUrl = endPointUrl;
