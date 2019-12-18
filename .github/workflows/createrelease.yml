@@ -1,1 +1,48 @@
+name: Release
 
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: "Release"
+    env:
+        ASPNETCORE_ENVIRONMENT: "Production"
+
+    runs-on: ubuntu-16.04
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+    - name: Restore Nuget Packages
+      run: dotnet restore SubscriptionService.sln --source https://api.nuget.org/v3/index.json
+
+    - name: Build Code
+      run: dotnet build SubscriptionService.sln --configuration Release
+
+    - name: Run Unit Tests
+      run: |
+        echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
+        dotnet test "test\SubscriptionService.Tests\SubscriptionService.Tests.csproj"
+        
+    #- name: Build Docker Images 
+    #  run: |
+    #    docker build . --file SubscriptionService/Dockerfile --tag subscriptionservice:latest
+    
+    #- name: Run Integration Tests
+    #  run: dotnet test "test\SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj"
+
+    #- name: Publish Images to Docker Hub
+    #  run: |
+    #    docker login --username=${{ secrets.DOCKER_USERNAME }} --password=${{ secrets.DOCKER_PASSWORD }}
+    #    docker push reponame/subscriptionservice:latest
+           
+    #- name: Build and Publish Nuget Packages
+    #  run: |
+    #    dotnet pack "src/SubscriptionService\SubscriptionService.csproj" /p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output Nugets
+    #    dotnet nuget push Nugets/SubscriptionService.${{ steps.get_version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGETKEY }} --source nuget.org
