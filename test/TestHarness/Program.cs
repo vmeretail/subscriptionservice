@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
@@ -30,10 +31,25 @@
             subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", new Uri("https://enc6iva61l9nl.x.pipedream.net")));
 
             ISubscriptionService subscriptionService = new SubscriptionService(subscriptions, eventStoreConnection);
+
+            subscriptionService.OnEventAppeared += Program.SubscriptionService_OnEventAppeared;
+
             subscriptionService.TraceGenerated += Program.SubscriptionService_TraceGenerated;
             await subscriptionService.Start(CancellationToken.None);
 
             Console.ReadKey();
+        }
+
+        /// <summary>
+        /// Subscriptions the service on event appeared.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The e.</param>
+        private static void SubscriptionService_OnEventAppeared(Object sender,
+                                                                HttpRequestMessage e)
+        {
+            //The user can make some changes (like adding headers)
+            e.Headers.Add("Authorization", "Bearer someToken");
         }
 
         /// <summary>

@@ -3,9 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Net;
     using System.Net.Http;
-    using System.Net.Http.Headers;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -15,36 +13,16 @@
 
     /// <summary>
     /// </summary>
-    /// <seealso cref="SubscriptionService.ISubscriptionService" />
+    /// <seealso cref="ISubscriptionService" />
     /// <seealso cref="ISubscriptionService" />
     public class SubscriptionService : ISubscriptionService
     {
         #region Fields
 
         /// <summary>
-        /// The connection string
-        /// </summary>
-        private readonly String ConnectionString;
-
-        /// <summary>
-        /// The destroy lock
-        /// </summary>
-        private readonly Object DestroyLock = new Object();
-
-        /// <summary>
         /// The event store connection
         /// </summary>
         private readonly IEventStoreConnection EventStoreConnection;
-        
-        /// <summary>
-        /// The lock object
-        /// </summary>
-        private readonly Object LockObject = new Object();
-
-        /// <summary>
-        /// The manual reset event
-        /// </summary>
-        private readonly ManualResetEvent ManualResetEvent = new ManualResetEvent(true);
 
         /// <summary>
         /// The subscriptions
@@ -80,13 +58,6 @@
             this.Subscriptions = subscriptions;
             this.EventStoreConnection = eventStoreConnection;
 
-            // Wire up the event store connection events
-            this.EventStoreConnection.Connected += this.EventStoreConnection_Connected;
-            this.EventStoreConnection.Closed += this.EventStoreConnection_Closed;
-            this.EventStoreConnection.Reconnecting += this.EventStoreConnection_Reconnecting;
-            this.EventStoreConnection.ErrorOccurred += this.EventStoreConnection_ErrorOccurred;
-            this.EventStoreConnection.Disconnected += this.EventStoreConnection_Disconnected;
-
             // Cache the user credentials
             this.DefaultUserCredentials = new UserCredentials(username, password);
         }
@@ -104,14 +75,6 @@
         public Boolean IsStarted { get; private set; }
 
         /// <summary>
-        /// Gets or sets the connection.
-        /// </summary>
-        /// <value>
-        /// The connection.
-        /// </value>
-        private IEventStoreConnection Connection { get; set; }
-
-        /// <summary>
         /// The default user credentials
         /// </summary>
         /// <value>
@@ -122,6 +85,11 @@
         #endregion
 
         #region Events
+
+        /// <summary>
+        /// Occurs when [on event appeared].
+        /// </summary>
+        public event EventHandler<HttpRequestMessage> OnEventAppeared;
 
         /// <summary>
         /// Occurs when trace is generated.
@@ -241,90 +209,67 @@
         /// <param name="resolvedEvent">The resolved event.</param>
         /// <param name="subscriptionConfiguration">The subscription configuration.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
+        /// <exception cref="Exception">Response from server was {response}</exception>
         private async Task EventAppeared(EventStorePersistentSubscriptionBase subscription,
                                          ResolvedEvent resolvedEvent,
                                          Subscription subscriptionConfiguration,
                                          CancellationToken cancellationToken)
         {
+            CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
             try
             {
                 //If instructed to, we will ignore event types beginning with the character $.
                 //This helps stop sending unused events to our read models etc (which will probably end up parked anyway)
                 if (resolvedEvent.Event == null)
                 {
-                    // This indicates we have a badly formatted event so just ignore it as nothing can be done :|
+                    // This indicates we have a badly formatted event so just ignore it as nothing can be done 
                     subscription.Acknowledge(resolvedEvent);
                     return;
                 }
 
                 this.Trace($"EventAppearedFromPersistentSubscription with Event Id {resolvedEvent.Event.EventId}");
 
-                String serialisedData = this.GetSerialisedDataFromEvent(resolvedEvent);
+                //Build a standard WebRequest
+                String serialisedData = Encoding.Default.GetString(resolvedEvent.Event.Data, 0, resolvedEvent.Event.Data.Length);
 
-                await this.PublishMessage(subscriptionConfiguration.EndPointUri, serialisedData, resolvedEvent.Event.EventId, cancellationToken);
+                HttpRequestMessage request = new HttpRequestMessage
+                                             {
+                                                 Method = HttpMethod.Post,
+                                                 Content = new StringContent(serialisedData, Encoding.UTF8, "application/json"),
+                                                 RequestUri = subscriptionConfiguration.EndPointUri
+                                             };
+
+                if (this.OnEventAppeared != null)
+                {
+                    //Let the caller make some changes to the HttpRequestMessage
+                    this.OnEventAppeared(this, request);
+                }
+
+                using(HttpClient httpClient = new HttpClient())
+                {
+                    HttpResponseMessage postTask = await httpClient.SendAsync(request, cancellationToken);
+
+                    //Throw exception if not successful
+                    if (!postTask.IsSuccessStatusCode)
+                    {
+                        String response = await postTask.Content.ReadAsStringAsync();
+
+                        //This would force a NAK
+                        throw new Exception($"Response from server was {response}");
+                    }
+                }
 
                 subscription.Acknowledge(resolvedEvent);
             }
             catch(Exception e)
             {
+                // Cancel the call to the server
+                linkedTokenSource.Cancel();
+
                 this.Trace(e);
                 this.NakEvent(subscription, resolvedEvent, e);
             }
-        }
-
-        /// <summary>
-        /// Handles the Closed event of the EventStoreConnection control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="ClientClosedEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_Closed(Object sender,
-                                                 ClientClosedEventArgs e)
-        {
-            this.Trace($"Connection {e.Connection.ConnectionName} Closed, Reason {e.Reason}");
-        }
-
-        /// <summary>
-        /// Handles the Connected event of the EventStoreConnection control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="ClientConnectionEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_Connected(Object sender,
-                                                    ClientConnectionEventArgs e)
-        {
-            this.Trace($"Connection {e.Connection.ConnectionName} Connected to Endpoint {e.RemoteEndPoint.Address}:{e.RemoteEndPoint.Port}");
-        }
-
-        /// <summary>
-        /// Handles the Disconnected event of the EventStoreConnection control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="ClientConnectionEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_Disconnected(Object sender,
-                                                       ClientConnectionEventArgs e)
-        {
-            this.Trace($"Connection {e.Connection.ConnectionName} Disconnected from Endpoint {e.RemoteEndPoint.Address}:{e.RemoteEndPoint.Port}");
-        }
-
-        /// <summary>
-        /// Handles the ErrorOccurred event of the EventStoreConnection control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="ClientErrorEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_ErrorOccurred(Object sender,
-                                                        ClientErrorEventArgs e)
-        {
-            this.Trace($"Connection {e.Connection.ConnectionName} ErrorOccurred, Exception {e.Exception}");
-        }
-
-        /// <summary>
-        /// Handles the Reconnecting event of the EventStoreConnection control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="ClientReconnectingEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_Reconnecting(Object sender,
-                                                       ClientReconnectingEventArgs e)
-        {
-            this.Trace($"Connection {e.Connection.ConnectionName} Reconnecting");
         }
 
         /// <summary>
@@ -335,16 +280,6 @@
         {
             //All standard settings in here. We might put configuration in here.
             return PersistentSubscriptionSettings.Create().ResolveLinkTos().WithMaxRetriesOf(10).WithMessageTimeoutOf(TimeSpan.FromSeconds(10));
-        }
-
-        /// <summary>
-        /// Gets the serialised data from event.
-        /// </summary>
-        /// <param name="resolvedEvent">The resolved event.</param>
-        /// <returns></returns>
-        private String GetSerialisedDataFromEvent(ResolvedEvent resolvedEvent)
-        {
-            return Encoding.Default.GetString(resolvedEvent.Event.Data, 0, resolvedEvent.Event.Data.Length);
         }
 
         /// <summary>
@@ -364,67 +299,6 @@
             catch(Exception ex)
             {
                 this.Trace(ex);
-            }
-        }
-
-        /// <summary>
-        /// Publishes the message.
-        /// </summary>
-        /// <param name="url">The URL.</param>
-        /// <param name="content">The content.</param>
-        /// <param name="eventId">The event identifier.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <exception cref="Exception"></exception>
-        private async Task PublishMessage(Uri uri,
-                                          String content,
-                                          Guid eventId,
-                                          CancellationToken cancellationToken)
-        {
-            CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-            try
-            {
-                // hardcoded at the moment
-                Int32 httpRequestTimeout = 8;
-
-                // Create our Http Client to publish the message to the consumer endpoint
-                using (var httpClient = new HttpClient())
-                {
-                    httpClient.Timeout = TimeSpan.FromSeconds(httpRequestTimeout);
-                    httpClient.DefaultRequestHeaders.Accept.Clear();
-                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                    using(HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, uri))
-                    {
-                        request.Content = new StringContent(content, Encoding.UTF8, "application/json");
-
-                        this.Trace($"About to Send Event Id {eventId}");
-
-                        using(HttpResponseMessage responseMessage = await httpClient.SendAsync(request, cancellationToken))
-                        {
-                            if (!responseMessage.IsSuccessStatusCode)
-                            {
-                                String responseBody = await responseMessage.Content.ReadAsStringAsync();
-                                HttpStatusCode statusCode = responseMessage.StatusCode;
-
-                                //We create a nicely formatted string for our Exception, showing the HTTP Status Code and any response body.
-                                //At this stage, we have decided to add this message to the CommunicationFailureException and Inner Exception.
-                                String errorMessage = $"Request failed [{statusCode}]. Response [{responseBody}]";
-
-                                throw new Exception(errorMessage);
-                            }
-                        }
-
-                        this.Trace($"Finished Sending Event Id {eventId}");
-                    }
-                }
-            }
-            catch(Exception e)
-            {
-                // Cancel the call to the server
-                linkedTokenSource.Cancel();
-                this.Trace($"Cancelled Processing of Event Id {eventId}");
-                throw;
             }
         }
 
@@ -454,17 +328,6 @@
             {
                 this.TraceGenerated(trace);
             }
-        }
-
-        /// <summary>
-        /// Traces the specified connection name.
-        /// </summary>
-        /// <param name="connection">The connection.</param>
-        /// <param name="trace">The trace.</param>
-        private void Trace(IEventStoreConnection connection,
-                           String trace)
-        {
-            this.Trace($"{connection.ConnectionName} : {trace}");
         }
 
         /// <summary>

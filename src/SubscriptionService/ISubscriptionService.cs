@@ -1,6 +1,7 @@
 ﻿namespace SubscriptionService
 {
     using System;
+    using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -21,6 +22,11 @@
         #endregion
 
         #region Events
+
+        /// <summary>
+        /// Occurs when [on event appeared].
+        /// </summary>
+        event EventHandler<HttpRequestMessage> OnEventAppeared;
 
         /// <summary>
         /// Occurs when [trace generated].
