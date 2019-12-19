@@ -21,15 +21,17 @@ namespace SubscriptionService.UnitTests
         public static String StreamName = "$ce-Sales";
 
         /// <summary>
-        /// The subscriptions
-        /// </summary>
-        public static List<Subscription> Subscriptions = new List<Subscription>();
-
-        /// <summary>
         /// The URL
         /// </summary>
         public static String Url = @"http://127.0.0.1/api/events/";
 
+        /// <summary>
+        /// The subscriptions
+        /// </summary>
+        public static List<Subscription> Subscriptions = new List<Subscription>
+                                                         {
+                                                             Subscription.Create(TestData.StreamName, TestData.GroupName, TestData.Url)
+                                                         };
         #endregion
     }
 }
