@@ -1,6 +1,12 @@
 # subscriptionservice
+|||
+| --- | --- |
+| **Build** | [![Build status](https://github.com/vmeretail/subscriptionservice/workflows/Release/badge.svg)](https://github.com/vmeretail/subscriptionservice/actions) |
+| **NuGet** | [![nuget](https://img.shields.io/nuget/v/EventStore.SubscriptionService.svg)](https://www.nuget.org/packages/EventStore.SubscriptionService/)
 
-TODO: CI Status
-TODO: Nuget
+
+
+
+
 TODO: Usage
 TODO: Running Tests (unit and Specflow)
