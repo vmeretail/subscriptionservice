@@ -226,11 +226,17 @@
 
             try
             {
-                //If instructed to, we will ignore event types beginning with the character $.
                 //This helps stop sending unused events to our read models etc (which will probably end up parked anyway)
                 if (resolvedEvent.Event == null)
                 {
                     // This indicates we have a badly formatted event so just ignore it as nothing can be done 
+                    subscription.Acknowledge(resolvedEvent);
+                    return;
+                }
+
+                if (resolvedEvent.Event.EventType.StartsWith("$"))
+                {
+                    //We will ignore event types beginning with the character $.
                     subscription.Acknowledge(resolvedEvent);
                     return;
                 }
