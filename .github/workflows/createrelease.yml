@@ -10,7 +10,7 @@ jobs:
     env:
         ASPNETCORE_ENVIRONMENT: "Production"
 
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v1
@@ -35,7 +35,7 @@ jobs:
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
         dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
            
-    #- name: Build and Publish Nuget Packages
-    #  run: |
-    #    dotnet pack "src/SubscriptionService\SubscriptionService.csproj" /p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output Nugets
-    #    dotnet nuget push Nugets/SubscriptionService.${{ steps.get_version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGETKEY }} --source nuget.org
+    - name: Build and Publish Nuget Packages
+      run: |
+        dotnet pack "src\SubscriptionService\SubscriptionService.csproj" /p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output Nugets
+        dotnet nuget push Nugets/SubscriptionService.${{ steps.get_version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_ORG_API_KEY }} --source nuget.org
