@@ -10,6 +10,7 @@
     using Configuration;
     using EventStore.ClientAPI;
     using EventStore.ClientAPI.SystemData;
+    using Factories;
 
     /// <summary>
     /// </summary>
@@ -27,7 +28,7 @@
         /// <summary>
         /// The subscriptions
         /// </summary>
-        private readonly List<Subscription> Subscriptions;
+        private readonly List<Domain.Subscription> Subscriptions;
 
         #endregion
 
@@ -55,7 +56,13 @@
                 throw new ArgumentNullException("Value cannot be null", nameof(eventStoreConnection));
             }
 
-            this.Subscriptions = subscriptions;
+            //Convert the Subscriptions to our internal model
+            SubscriptionFactory subscriptionFactory = new SubscriptionFactory();
+
+            this.Subscriptions = new List<Domain.Subscription>();
+
+            subscriptions.ForEach(s => this.Subscriptions.Add( subscriptionFactory.CreateFrom(s)));
+
             this.EventStoreConnection = eventStoreConnection;
 
             // Cache the user credentials
@@ -106,7 +113,7 @@
         /// <param name="cancellationToken">The cancellation token.</param>
         public async Task Start(CancellationToken cancellationToken)
         {
-            foreach (Subscription subscription in this.Subscriptions)
+            foreach (var subscription in this.Subscriptions)
             {
                 await this.ConnectToSubscription(subscription, cancellationToken);
             }
@@ -131,7 +138,7 @@
         /// </summary>
         /// <param name="subscription">The subscription.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        private async Task ConnectToSubscription(Subscription subscription,
+        private async Task ConnectToSubscription(Domain.Subscription subscription,
                                                  CancellationToken cancellationToken)
         {
             Int32 bufferSize = 10;
@@ -212,7 +219,7 @@
         /// <exception cref="Exception">Response from server was {response}</exception>
         private async Task EventAppeared(EventStorePersistentSubscriptionBase subscription,
                                          ResolvedEvent resolvedEvent,
-                                         Subscription subscriptionConfiguration,
+                                         Domain.Subscription subscriptionConfiguration,
                                          CancellationToken cancellationToken)
         {
             CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

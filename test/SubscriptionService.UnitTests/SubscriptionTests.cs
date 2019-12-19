@@ -2,6 +2,7 @@
 {
     using System;
     using Configuration;
+    using Factories;
     using Shouldly;
     using Xunit;
 
