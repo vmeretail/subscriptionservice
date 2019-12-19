@@ -44,6 +44,16 @@
                                    String username = "admin",
                                    String password = "changeit")
         {
+            if (subscriptions == null || subscriptions.Any() == false)
+            {
+                throw new ArgumentNullException("Value cannot be null or empty", nameof(subscriptions));
+            }
+
+            if (eventStoreConnection == null)
+            {
+                throw new ArgumentNullException("Value cannot be null", nameof(eventStoreConnection));
+            }
+
             this.Subscriptions = subscriptions;
             this.EventStoreConnection = eventStoreConnection;
 
