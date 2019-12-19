@@ -3,7 +3,6 @@
     using System;
 
     /// <summary>
-    /// 
     /// </summary>
     public class Subscription
     {
@@ -19,6 +18,16 @@
                              String groupName,
                              Uri endPointUri)
         {
+            if (String.IsNullOrWhiteSpace(streamName))
+            {
+                throw new ArgumentException("Value cannot be null or empty", nameof(streamName));
+            }
+
+            if (String.IsNullOrWhiteSpace(groupName))
+            {
+                throw new ArgumentException("Value cannot be null or empty", nameof(groupName));
+            }
+
             if (endPointUri == null)
             {
                 throw new ArgumentException("Value cannot be null", nameof(endPointUri));
