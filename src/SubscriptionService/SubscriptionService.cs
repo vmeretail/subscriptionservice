@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Net.Http;
     using System.Text;
     using System.Threading;
@@ -12,7 +13,7 @@
 
     /// <summary>
     /// </summary>
-    /// <seealso cref="SubscriptionService.ISubscriptionService" />
+    /// <seealso cref="ISubscriptionService" />
     /// <seealso cref="ISubscriptionService" />
     public class SubscriptionService : ISubscriptionService
     {
@@ -236,7 +237,7 @@
                                              {
                                                  Method = HttpMethod.Post,
                                                  Content = new StringContent(serialisedData, Encoding.UTF8, "application/json"),
-                                                 RequestUri = new Uri(subscriptionConfiguration.EndPointUrl)
+                                                 RequestUri = subscriptionConfiguration.EndPointUri
                                              };
 
                 if (this.OnEventAppeared != null)
