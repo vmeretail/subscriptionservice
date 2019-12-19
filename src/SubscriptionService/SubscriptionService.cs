@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
@@ -66,6 +67,16 @@
                                    String username = "admin",
                                    String password = "changeit")
         {
+            if (subscriptions == null || subscriptions.Any() == false)
+            {
+                throw new ArgumentNullException("Value cannot be null or empty", nameof(subscriptions));
+            }
+
+            if (eventStoreConnection == null)
+            {
+                throw new ArgumentNullException("Value cannot be null", nameof(eventStoreConnection));
+            }
+
             this.Subscriptions = subscriptions;
             this.EventStoreConnection = eventStoreConnection;
 
