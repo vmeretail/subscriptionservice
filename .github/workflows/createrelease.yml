@@ -37,5 +37,5 @@ jobs:
            
     - name: Build and Publish Nuget Packages
       run: |
-        dotnet pack "src\SubscriptionService\SubscriptionService.csproj" /p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output Nugets
-        dotnet nuget push Nugets/SubscriptionService.${{ steps.get_version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_ORG_API_KEY }} --source nuget.org
+        dotnet pack "src\SubscriptionService\SubscriptionService.csproj" /p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output Nugets -p:PackageID=EventStore.SubscriptionService
+        dotnet nuget push Nugets/EventStore.SubscriptionService.${{ steps.get_version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_ORG_API_KEY }} --source nuget.org
