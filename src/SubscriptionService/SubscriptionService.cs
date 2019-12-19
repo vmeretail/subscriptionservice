@@ -250,7 +250,7 @@
 
                 String serialisedData = this.GetSerialisedDataFromEvent(resolvedEvent);
 
-                await this.PublishMessage(subscriptionConfiguration.EndPointUrl, serialisedData, resolvedEvent.Event.EventId, cancellationToken);
+                await this.PublishMessage(subscriptionConfiguration.EndPointUri, serialisedData, resolvedEvent.Event.EventId, cancellationToken);
 
                 subscription.Acknowledge(resolvedEvent);
             }
@@ -364,7 +364,7 @@
         /// <param name="eventId">The event identifier.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <exception cref="Exception"></exception>
-        private async Task PublishMessage(String url,
+        private async Task PublishMessage(Uri uri,
                                           String content,
                                           Guid eventId,
                                           CancellationToken cancellationToken)
@@ -383,7 +383,7 @@
                     httpClient.DefaultRequestHeaders.Accept.Clear();
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                    using(HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url))
+                    using(HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, uri))
                     {
                         request.Content = new StringContent(content, Encoding.UTF8, "application/json");
 

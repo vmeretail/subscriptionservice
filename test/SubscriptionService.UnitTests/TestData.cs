@@ -28,7 +28,7 @@ namespace SubscriptionService.UnitTests
         /// <summary>
         /// The URL
         /// </summary>
-        public static String Url = @"127.0.0.1/api/events";
+        public static String Url = @"http://127.0.0.1/api/events/";
 
         #endregion
     }
