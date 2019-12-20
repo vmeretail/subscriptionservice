@@ -21,7 +21,7 @@ Install-Package EventStore.SubscriptionService -Version 0.0.0-alpha
 ## Usage
 
 Running the service is straight forward.
-The code example below demonstrates how to hook up a Subscriptino Service instance with an Event Store, and create a single persistent subscription.
+The code example below demonstrates how to hook up a Subscription Service instance with an Event Store, and create a single persistent subscription.
 
 ```
 String connectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
