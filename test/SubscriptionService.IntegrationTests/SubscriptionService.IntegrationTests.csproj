@@ -25,4 +25,10 @@
     <ProjectReference Include="..\..\src\SubscriptionService\SubscriptionService.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="db.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
