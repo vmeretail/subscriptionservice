@@ -58,15 +58,15 @@ namespace SubscriptionService.IntegrationTests
 
         public void StopContainersForScenarioRun()
         {
-            if (this.EventStoreContainer != null)
-            {
-                this.EventStoreContainer.ClearUpContainer();
-            }
+            //if (this.EventStoreContainer != null)
+            //{
+            //    this.EventStoreContainer.ClearUpContainer();
+            //}
 
-            if (this.DummyRESTContainer != null)
-            {
-                this.DummyRESTContainer.ClearUpContainer();
-            }
+            //if (this.DummyRESTContainer != null)
+            //{
+            //    this.DummyRESTContainer.ClearUpContainer();
+            //}
         }
 
         private static IContainerService CreateEventStoreContainer(String containerName,
