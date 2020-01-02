@@ -233,6 +233,8 @@
 
             HttpResponseMessage responseMessage = await this.EventStoreHttpClient.SendAsync(requestMessage);
 
+            Console.WriteLine(responseMessage.StatusCode);
+
             responseMessage.EnsureSuccessStatusCode();
         }
 
