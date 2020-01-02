@@ -39,3 +39,7 @@ jobs:
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
         dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
         dotnet test "test\SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj"
+        
+    - name: Setup tmate session
+      if: failure()
+      uses: mxschmitt/action-tmate@v1        
