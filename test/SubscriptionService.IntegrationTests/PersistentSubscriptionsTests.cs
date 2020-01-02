@@ -231,7 +231,7 @@
                                                  String streamName)
         {
             TcpClient tcp = new TcpClient();
-            await tcp.ConnectAsync($"127.0.0.1", this.DockerHelper.EventStoreTcpPort);
+            await tcp.ConnectAsync($"127.0.0.1", this.DockerHelper.EventStoreHttpPort);
             Console.WriteLine($"Tcp Connected");
             String uri = $"{this.EventStoreHttpClient.BaseAddress}/{streamName}";
 
