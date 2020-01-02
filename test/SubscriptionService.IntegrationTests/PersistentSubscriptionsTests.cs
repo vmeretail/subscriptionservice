@@ -57,6 +57,8 @@
         public PersistentSubscriptionsTests()
         {
             Console.WriteLine("In the ctor");
+            
+            this.DockerHelper = new DockerHelper();
 
             // Start the Event Store & Dummy API
             this.DockerHelper.StartContainersForScenarioRun();
@@ -70,9 +72,7 @@
             Console.WriteLine(response.StatusCode);
 
             Console.WriteLine("after test code");
-
-            this.DockerHelper = new DockerHelper();
-
+            
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
             this.EventStoreHttpClient = this.GetHttpClient();
