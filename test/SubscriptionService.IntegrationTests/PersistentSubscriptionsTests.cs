@@ -1,28 +1,57 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace SubscriptionService.IntegrationTests
+﻿namespace SubscriptionService.IntegrationTests
 {
-    using System.IO;
+    using System;
+    using System.Collections.Generic;
     using System.Net.Http;
     using System.Net.Http.Headers;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Configuration;
-    using Ductus.FluentDocker.Model.Containers;
     using EventStore.ClientAPI;
     using Newtonsoft.Json;
+    using Shouldly;
     using Xunit;
-    using Xunit.Sdk;
 
-    public class PersistentSubscriptionsTests
+    /// <summary>
+    /// </summary>
+    /// <seealso cref="System.IDisposable" />
+    public class PersistentSubscriptionsTests : IDisposable
     {
-        private HttpClient HttpClient;
+        #region Fields
 
-        private String EventStoreHttpAddress;
+        /// <summary>
+        /// The docker helper
+        /// </summary>
+        private readonly DockerHelper DockerHelper;
 
-        private DockerHelper DockerHelper;
+        /// <summary>
+        /// The event store connection
+        /// </summary>
+        private readonly IEventStoreConnection EventStoreConnection;
+
+        /// <summary>
+        /// The event store HTTP address
+        /// </summary>
+        private readonly String EventStoreHttpAddress;
+
+        /// <summary>
+        /// The event store HTTP client
+        /// </summary>
+        private readonly HttpClient EventStoreHttpClient;
+
+        /// <summary>
+        /// The read model HTTP client
+        /// </summary>
+        private readonly HttpClient ReadModelHttpClient;
+
+        #endregion
+
+        #region Constructors
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PersistentSubscriptionsTests" /> class.
+        /// </summary>
         public PersistentSubscriptionsTests()
         {
             this.DockerHelper = new DockerHelper();
@@ -32,9 +61,41 @@ namespace SubscriptionService.IntegrationTests
 
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
-            this.HttpClient = GetHttpClient(this.EventStoreHttpAddress, "admin", "changeit");
+            this.EventStoreHttpClient = this.GetHttpClient(this.EventStoreHttpAddress);
+            this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
+            this.ReadModelHttpClient = this.GetHttpClient($"http://127.0.0.1:{this.DockerHelper.DummyRESTHttpPort}");
+
+            // Build the Event Store Connection String 
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+
+            // Setup the Event Store Connection
+            this.EventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+
+            this.EventStoreConnection.Connected += this.EventStoreConnection_Connected;
+            this.EventStoreConnection.Closed += this.EventStoreConnection_Closed;
+            this.EventStoreConnection.ErrorOccurred += this.EventStoreConnection_ErrorOccurred;
+            this.EventStoreConnection.Reconnecting += this.EventStoreConnection_Reconnecting;
         }
 
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            this.DockerHelper.StopContainersForScenarioRun();
+
+            // Suppress finalization.
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Persistents the subscriptions event delivery event is delivered.
+        /// </summary>
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_EventIsDelivered()
         {
@@ -57,147 +118,133 @@ namespace SubscriptionService.IntegrationTests
             List<Subscription> subscriptionList = new List<Subscription>();
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup", endPointUrl));
 
-            // Build the Event Store Connection String 
-            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
-
-            // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
-            await eventStoreConnection.ConnectAsync();
-
-            eventStoreConnection.Connected += EventStoreConnection_Connected;
-            eventStoreConnection.Closed += EventStoreConnection_Closed;
-            eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
-            eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
+            await this.EventStoreConnection.ConnectAsync();
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(subscriptionList, eventStoreConnection);
-            subscriptionService.TraceGenerated += SubscriptionService_TraceGenerated;
+            SubscriptionService subscriptionService = new SubscriptionService(subscriptionList, this.EventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+
             // 2. Act
             // Start the subscription service
             await subscriptionService.Start(CancellationToken.None);
 
             // 3. Assert
             // Do a GET on the dummy API to check if events have been delivered
+            await Retry.For(async () =>
+                            {
+                                HttpResponseMessage responseMessage = await this.ReadModelHttpClient.GetAsync("/events", CancellationToken.None);
+                                String responseContent = await responseMessage.Content.ReadAsStringAsync();
+                                if (String.IsNullOrEmpty(responseContent))
+                                {
+                                    throw new Exception();
+                                }
 
-            // Check the counts are expected
+                                this.LogMessageToTrace(responseContent);
 
-            // 4. Cleanup (TODO: move to after scenario)
+                                responseContent.Contains(sale.EventId.ToString()).ShouldBeTrue();
+                            });
+
+            // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
-            this.DockerHelper.StopContainersForScenarioRun();
+            this.EventStoreConnection.Close();
         }
 
-        private void LogMessageToTrace(String traceMessage)
+        /// <summary>
+        /// Handles the Closed event of the EventStoreConnection control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="ClientClosedEventArgs" /> instance containing the event data.</param>
+        private void EventStoreConnection_Closed(Object sender,
+                                                 ClientClosedEventArgs e)
         {
-            using (StreamWriter sw = new StreamWriter(@"c:\temp\debug.log", true))
-            {
-                sw.WriteLine(traceMessage);
-            }
+            this.LogMessageToTrace($"Connection {e.Connection.ConnectionName} Closed [{e.Reason}]");
         }
 
-        private void EventStoreConnection_Reconnecting(object sender, ClientReconnectingEventArgs e)
+        /// <summary>
+        /// Handles the Connected event of the EventStoreConnection control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="ClientConnectionEventArgs" /> instance containing the event data.</param>
+        private void EventStoreConnection_Connected(Object sender,
+                                                    ClientConnectionEventArgs e)
         {
-            LogMessageToTrace($"Connection {e.Connection.ConnectionName} Reconnecting");
+            this.LogMessageToTrace($"Connection {e.Connection.ConnectionName} Connected");
         }
 
-        private void EventStoreConnection_ErrorOccurred(object sender, ClientErrorEventArgs e)
+        /// <summary>
+        /// Handles the ErrorOccurred event of the EventStoreConnection control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="ClientErrorEventArgs" /> instance containing the event data.</param>
+        private void EventStoreConnection_ErrorOccurred(Object sender,
+                                                        ClientErrorEventArgs e)
         {
-            LogMessageToTrace($"Connection {e.Connection.ConnectionName} Error Occurred [{e.Exception}]");
+            this.LogMessageToTrace($"Connection {e.Connection.ConnectionName} Error Occurred [{e.Exception}]");
         }
 
-        private void EventStoreConnection_Closed(object sender, ClientClosedEventArgs e)
+        /// <summary>
+        /// Handles the Reconnecting event of the EventStoreConnection control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="ClientReconnectingEventArgs" /> instance containing the event data.</param>
+        private void EventStoreConnection_Reconnecting(Object sender,
+                                                       ClientReconnectingEventArgs e)
         {
-            LogMessageToTrace($"Connection {e.Connection.ConnectionName} Closed [{e.Reason}]");
+            this.LogMessageToTrace($"Connection {e.Connection.ConnectionName} Reconnecting");
         }
 
-        private void EventStoreConnection_Connected(object sender, ClientConnectionEventArgs e)
-        {
-            LogMessageToTrace($"Connection {e.Connection.ConnectionName} Connected");
-        }
-
-        private void SubscriptionService_TraceGenerated(string trace)
-        {
-            LogMessageToTrace(trace);
-        }
-
-        private HttpClient GetHttpClient(String eventStoreAddress,
-                                         String username,
-                                         String password)
+        /// <summary>
+        /// Gets the HTTP client.
+        /// </summary>
+        /// <param name="baseAddress">The base address.</param>
+        /// <returns></returns>
+        private HttpClient GetHttpClient(String baseAddress)
         {
             HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(eventStoreAddress);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
-                                                                                       Convert
-                                                                                           .ToBase64String(Encoding
-                                                                                                           .ASCII
-                                                                                                           .GetBytes($"{username}:{password}")));
+            client.BaseAddress = new Uri(baseAddress);
 
             return client;
         }
 
-        private async Task PostEventToEventStore(Object eventData, Guid eventId, String streamName)
+        /// <summary>
+        /// Logs the message to trace.
+        /// </summary>
+        /// <param name="traceMessage">The trace message.</param>
+        private void LogMessageToTrace(String traceMessage)
         {
-            String uri = $"{this.HttpClient.BaseAddress}/{streamName}";
+            Console.WriteLine(traceMessage);
+        }
+
+        /// <summary>
+        /// Posts the event to event store.
+        /// </summary>
+        /// <param name="eventData">The event data.</param>
+        /// <param name="eventId">The event identifier.</param>
+        /// <param name="streamName">Name of the stream.</param>
+        private async Task PostEventToEventStore(Object eventData,
+                                                 Guid eventId,
+                                                 String streamName)
+        {
+            String uri = $"{this.EventStoreHttpClient.BaseAddress}/{streamName}";
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, uri);
             requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
             requestMessage.Headers.Add("ES-EventId", eventId.ToString());
             requestMessage.Content = new StringContent(JsonConvert.SerializeObject(eventData), Encoding.UTF8, "application/json");
 
-            HttpResponseMessage responseMessage = await this.HttpClient.SendAsync(requestMessage);
+            HttpResponseMessage responseMessage = await this.EventStoreHttpClient.SendAsync(requestMessage);
 
             responseMessage.EnsureSuccessStatusCode();
         }
 
-        private async Task PostSaleToEventStore(String eventStoreAddress,
-                                                String aggregateName,
-                                                Guid aggregateId,
-                                                Int32 numberofLines = 1)
+        /// <summary>
+        /// Subscriptions the service trace generated.
+        /// </summary>
+        /// <param name="trace">The trace.</param>
+        private void SubscriptionService_TraceGenerated(String trace)
         {
-            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
-
-            // POST the sale started event
-            SaleStartedEvent saleStartedEvent = new SaleStartedEvent();
-            saleStartedEvent.AggregateId = aggregateId;
-            saleStartedEvent.EventDateTime = DateTime.Now;
-            saleStartedEvent.EventId = Guid.NewGuid();
-
-            await this.PostEventToEventStore(saleStartedEvent, saleStartedEvent.EventId, streamName);
+            this.LogMessageToTrace(trace);
         }
 
-
-        private void GetEventsFromEndpoint(String endPointUrl)
-        {
-            
-        }
-    }
-
-    public class SaleStartedEvent
-    {
-        public Guid EventId { get; set; }
-        public Guid AggregateId { get; set; }
-
-        public DateTime EventDateTime { get; set; }
-    }
-
-    public class SaleLineAddedEvent
-    {
-        public Guid AggregateId { get; set; }
-
-        public DateTime EventDateTime { get; set; }
-
-        public Int32 Quantity { get; set; }
-
-        public Decimal UnitCost { get; set; }
-
-        public Decimal TotalCost { get; set; }
-    }
-
-    public class SaleCompletedEvent
-    {
-        public Guid AggregateId { get; set; }
-
-        public DateTime EventDateTime { get; set; }
-
-        public Int32 Quantity { get; set; }
-        public Decimal TotalValue { get; set; }
+        #endregion
     }
 }
