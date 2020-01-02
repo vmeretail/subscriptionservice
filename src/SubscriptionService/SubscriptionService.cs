@@ -235,7 +235,7 @@
                     return;
                 }
 
-                this.Trace($"EventAppearedFromPersistentSubscription with Event Id {resolvedEvent.Event.EventId}");
+                this.Trace($"Event Id {resolvedEvent.Event.EventId} - EventAppearedFromPersistentSubscription");
 
                 //Build a standard WebRequest
                 String serialisedData = Encoding.Default.GetString(resolvedEvent.Event.Data, 0, resolvedEvent.Event.Data.Length);
@@ -253,7 +253,9 @@
                     this.OnEventAppeared(this, request);
                 }
 
-                using(HttpClient httpClient = new HttpClient())
+                this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
+
+                using (HttpClient httpClient = new HttpClient())
                 {
                     HttpResponseMessage postTask = await httpClient.SendAsync(request, cancellationToken);
 
@@ -265,6 +267,8 @@
                         //This would force a NAK
                         throw new Exception($"Response from server was {response}");
                     }
+
+                    this.Trace($"Event Id {resolvedEvent.Event.EventId} - Event POST successful");
                 }
 
                 subscription.Acknowledge(resolvedEvent);
