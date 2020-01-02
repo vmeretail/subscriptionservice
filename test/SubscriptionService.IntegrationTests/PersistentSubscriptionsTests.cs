@@ -64,10 +64,10 @@
 
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
-            this.EventStoreHttpClient = this.GetHttpClient(this.EventStoreHttpAddress);
+            this.EventStoreHttpClient = this.GetHttpClient();
             this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-            this.ReadModelHttpClient = this.GetHttpClient($"http://127.0.0.1:{this.DockerHelper.DummyRESTHttpPort}");
+            this.ReadModelHttpClient = this.GetHttpClient();
 
             // Build the Event Store Connection String 
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
@@ -135,7 +135,7 @@
             // Do a GET on the dummy API to check if events have been delivered
             await Retry.For(async () =>
                             {
-                                HttpResponseMessage responseMessage = await this.ReadModelHttpClient.GetAsync("/events", CancellationToken.None);
+                                HttpResponseMessage responseMessage = await this.ReadModelHttpClient.GetAsync(endPointUrl, CancellationToken.None);
                                 String responseContent = await responseMessage.Content.ReadAsStringAsync();
                                 if (String.IsNullOrEmpty(responseContent))
                                 {
@@ -201,10 +201,9 @@
         /// </summary>
         /// <param name="baseAddress">The base address.</param>
         /// <returns></returns>
-        private HttpClient GetHttpClient(String baseAddress)
+        private HttpClient GetHttpClient()
         {
             HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(baseAddress);
 
             return client;
         }
