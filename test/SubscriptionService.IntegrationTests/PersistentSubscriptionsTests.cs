@@ -58,6 +58,9 @@
         {
             Console.WriteLine("In the ctor");
 
+            // Start the Event Store & Dummy API
+            this.DockerHelper.StartContainersForScenarioRun();
+
             String url = $"http://127.0.0.1:32768/ping";
 
             HttpClient client = new HttpClient();
@@ -69,9 +72,6 @@
             Console.WriteLine("after test code");
 
             this.DockerHelper = new DockerHelper();
-
-            // Start the Event Store & Dummy API
-            this.DockerHelper.StartContainersForScenarioRun();
 
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
