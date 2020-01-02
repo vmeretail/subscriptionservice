@@ -228,6 +228,9 @@
                                                  String streamName)
         {
             String uri = $"{this.EventStoreHttpClient.BaseAddress}/{streamName}";
+
+            Console.WriteLine($"PostEventToEventStore - uri is [{uri}]");
+
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, uri);
             requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
             requestMessage.Headers.Add("ES-EventId", eventId.ToString());
