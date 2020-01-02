@@ -204,13 +204,14 @@
         /// <returns></returns>
         private HttpClient GetHttpClient()
         {
-            //IServiceCollection services = new ServiceCollection();
+            AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
 
-            //services.AddHttpClient();
+            IServiceCollection services = new ServiceCollection();
+            services.AddHttpClient();
 
-            //Setup.HttpClientFactory = services.BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
+            IHttpClientFactory httpClientFactory = services.BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
 
-            HttpClient client = new HttpClient();
+            HttpClient client = httpClientFactory.CreateClient(Guid.NewGuid().ToString());
 
             return client;
         }
