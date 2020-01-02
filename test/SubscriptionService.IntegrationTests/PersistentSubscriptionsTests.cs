@@ -67,14 +67,15 @@
 
             this.EventStoreHttpClient = this.GetHttpClient();
 
-            this.LogMessageToTrace("About to Ping ES on 127.0.0.1");
-            var response = this.EventStoreHttpClient.GetAsync($"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/ping").Result;
-            this.LogMessageToTrace($"After Ping ES on 127.0.0.1 {response.StatusCode}");
+            //this.LogMessageToTrace("About to Ping ES on 127.0.0.1");
+            //var response = this.EventStoreHttpClient.GetAsync($"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/ping").Result;
+            //this.LogMessageToTrace($"After Ping ES on 127.0.0.1 {response.StatusCode}");
 
             //this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
             //    new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-            //this.ReadModelHttpClient = this.GetHttpClient();
-
+            this.ReadModelHttpClient = this.GetHttpClient();
+            var result = this.ReadModelHttpClient.GetAsync($"http://127.0.0.1:{this.DockerHelper.DummyRESTHttpPort}/events").Result;
+            this.LogMessageToTrace($"After GET RM on 127.0.0.1 {result.StatusCode}");
             // Build the Event Store Connection String 
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
 
