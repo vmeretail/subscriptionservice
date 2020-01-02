@@ -32,7 +32,7 @@ jobs:
       run: dotnet build SubscriptionService.sln --configuration Release
 
     - name: Build Dummy REST docker image
-      run: docker build ./test/SubscriptionService.IntegrationTests --file test/SubscriptionService.IntegrationTests/Dockerfile --tag vmedummyjson:latest
+      run: docker build ./test/SubscriptionService.IntegrationTests --file test/SubscriptionService.IntegrationTests/Dockerfile --tag vmedummyjsonapi:latest
     
     - name: Run Tests
       run: |
