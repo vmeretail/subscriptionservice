@@ -34,7 +34,19 @@ jobs:
       run: |
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
         dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
-           
+
+    - name: Build Dummy REST docker image
+      uses: buildtool/build-action@v1
+      with:
+        # specify Dockerfile to use
+        dockerfile: test\SubscriptionService.IntegrationTests\Dockerfile
+    
+    - name: Run Tests
+      run: |
+        echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
+        dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
+        dotnet test "test\SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj"
+
     - name: Build and Publish Nuget Packages
       run: |
         dotnet pack "src\SubscriptionService\SubscriptionService.csproj" /p:PackageVersion=${{ steps.get_version.outputs.VERSION }} --output Nugets -p:PackageID=EventStore.SubscriptionService
