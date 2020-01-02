@@ -36,7 +36,7 @@ jobs:
         # specify Dockerfile to use
         dockerfile: test\SubscriptionService.IntegrationTests\Dockerfile
     
-    - name: Run Unit Tests
+    - name: Run Tests
       run: |
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
         dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
