@@ -62,16 +62,6 @@
 
             // Start the Event Store & Dummy API
             this.DockerHelper.StartContainersForScenarioRun();
-
-            String url = $"http://127.0.0.1:32768/ping";
-
-            HttpClient client = new HttpClient();
-
-            var response = client.GetAsync(url).Result;
-
-            Console.WriteLine(response.StatusCode);
-
-            Console.WriteLine("after test code");
             
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
@@ -83,9 +73,9 @@
 
             //this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
             //    new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-            this.ReadModelHttpClient = this.GetHttpClient();
-            var result = this.ReadModelHttpClient.GetAsync($"http://127.0.0.1:{this.DockerHelper.DummyRESTHttpPort}/events").Result;
-            this.LogMessageToTrace($"After GET RM on 127.0.0.1 {result.StatusCode}");
+            //this.ReadModelHttpClient = this.GetHttpClient();
+            //var result = this.ReadModelHttpClient.GetAsync($"http://127.0.0.1:{this.DockerHelper.DummyRESTHttpPort}/events").Result;
+            //this.LogMessageToTrace($"After GET RM on 127.0.0.1 {result.StatusCode}");
             // Build the Event Store Connection String 
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
 
@@ -119,6 +109,17 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_EventIsDelivered()
         {
+            String url = $"http://127.0.0.1:32768/ping";
+
+            HttpClient client = new HttpClient();
+
+            var response = await client.GetAsync(url);
+
+            Console.WriteLine(response.StatusCode);
+
+            Console.WriteLine("after test code");
+
+
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
             Guid aggregateId = Guid.NewGuid();
