@@ -232,7 +232,7 @@
         {
             TcpClient tcp = new TcpClient();
             await tcp.ConnectAsync($"127.0.0.1", this.DockerHelper.EventStoreTcpPort);
-
+            Console.WriteLine($"Tcp Connected");
             String uri = $"{this.EventStoreHttpClient.BaseAddress}/{streamName}";
 
             Console.WriteLine($"PostEventToEventStore - uri is [{uri}]");
