@@ -54,6 +54,8 @@
         /// </summary>
         public PersistentSubscriptionsTests()
         {
+            Console.WriteLine("In the ctor");
+
             this.DockerHelper = new DockerHelper();
 
             // Start the Event Store & Dummy API
