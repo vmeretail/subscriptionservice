@@ -79,8 +79,6 @@
             this.EventStoreConnection.Closed += this.EventStoreConnection_Closed;
             this.EventStoreConnection.ErrorOccurred += this.EventStoreConnection_ErrorOccurred;
             this.EventStoreConnection.Reconnecting += this.EventStoreConnection_Reconnecting;
-
-            this.EventStoreConnection.ConnectAsync().Wait();
         }
 
         #endregion
