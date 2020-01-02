@@ -7,7 +7,7 @@
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-    using Configuration;
+    using Domain;
     using EventStore.ClientAPI;
     using EventStore.ClientAPI.SystemData;
     using Factories;
@@ -28,7 +28,7 @@
         /// <summary>
         /// The subscriptions
         /// </summary>
-        private readonly List<Domain.Subscription> Subscriptions;
+        private readonly List<Subscription> Subscriptions;
 
         #endregion
 
@@ -41,7 +41,7 @@
         /// <param name="eventStoreConnection">The event store connection.</param>
         /// <param name="username">The username.</param>
         /// <param name="password">The password.</param>
-        public SubscriptionService(List<Subscription> subscriptions,
+        public SubscriptionService(List<Configuration.Subscription> subscriptions,
                                    IEventStoreConnection eventStoreConnection,
                                    String username = "admin",
                                    String password = "changeit")
@@ -59,9 +59,9 @@
             //Convert the Subscriptions to our internal model
             SubscriptionFactory subscriptionFactory = new SubscriptionFactory();
 
-            this.Subscriptions = new List<Domain.Subscription>();
+            this.Subscriptions = new List<Subscription>();
 
-            subscriptions.ForEach(s => this.Subscriptions.Add( subscriptionFactory.CreateFrom(s)));
+            subscriptions.ForEach(s => this.Subscriptions.Add(subscriptionFactory.CreateFrom(s)));
 
             this.EventStoreConnection = eventStoreConnection;
 
@@ -113,7 +113,7 @@
         /// <param name="cancellationToken">The cancellation token.</param>
         public async Task Start(CancellationToken cancellationToken)
         {
-            foreach (var subscription in this.Subscriptions)
+            foreach (Subscription subscription in this.Subscriptions)
             {
                 await this.ConnectToSubscription(subscription, cancellationToken);
             }
@@ -138,7 +138,7 @@
         /// </summary>
         /// <param name="subscription">The subscription.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        private async Task ConnectToSubscription(Domain.Subscription subscription,
+        private async Task ConnectToSubscription(Subscription subscription,
                                                  CancellationToken cancellationToken)
         {
             Int32 bufferSize = 10;
@@ -219,14 +219,13 @@
         /// <exception cref="Exception">Response from server was {response}</exception>
         private async Task EventAppeared(EventStorePersistentSubscriptionBase subscription,
                                          ResolvedEvent resolvedEvent,
-                                         Domain.Subscription subscriptionConfiguration,
+                                         Subscription subscriptionConfiguration,
                                          CancellationToken cancellationToken)
         {
             CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             try
             {
-                //If instructed to, we will ignore event types beginning with the character $.
                 //This helps stop sending unused events to our read models etc (which will probably end up parked anyway)
                 if (resolvedEvent.Event == null)
                 {
@@ -235,7 +234,14 @@
                     return;
                 }
 
-                this.Trace($"Event Id {resolvedEvent.Event.EventId} - EventAppearedFromPersistentSubscription");
+                if (resolvedEvent.Event.EventType.StartsWith("$"))
+                {
+                    //We will ignore event types beginning with the character $.
+                    subscription.Acknowledge(resolvedEvent);
+                    return;
+                }
+
+                this.Trace($"EventAppearedFromPersistentSubscription with Event Id {resolvedEvent.Event.EventId}");
 
                 //Build a standard WebRequest
                 String serialisedData = Encoding.Default.GetString(resolvedEvent.Event.Data, 0, resolvedEvent.Event.Data.Length);
@@ -253,22 +259,17 @@
                     this.OnEventAppeared(this, request);
                 }
 
-                this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
+                HttpClient httpClient = subscriptionConfiguration.HttpClient;
 
-                using (HttpClient httpClient = new HttpClient())
+                HttpResponseMessage postTask = await httpClient.SendAsync(request, cancellationToken);
+
+                //Throw exception if not successful
+                if (!postTask.IsSuccessStatusCode)
                 {
-                    HttpResponseMessage postTask = await httpClient.SendAsync(request, cancellationToken);
+                    String response = await postTask.Content.ReadAsStringAsync();
 
-                    //Throw exception if not successful
-                    if (!postTask.IsSuccessStatusCode)
-                    {
-                        String response = await postTask.Content.ReadAsStringAsync();
-
-                        //This would force a NAK
-                        throw new Exception($"Response from server was {response}");
-                    }
-
-                    this.Trace($"Event Id {resolvedEvent.Event.EventId} - Event POST successful");
+                    //This would force a NAK
+                    throw new Exception($"Response from server was {response}");
                 }
 
                 subscription.Acknowledge(resolvedEvent);
