@@ -31,10 +31,7 @@ jobs:
       run: dotnet build SubscriptionService.sln --configuration Release
 
     - name: Build Dummy REST docker image
-      uses: buildtool/build-action@v1
-      with:
-        # specify Dockerfile to use
-        dockerfile: test\SubscriptionService.IntegrationTests\Dockerfile
+      run: docker build . --file test\SubscriptionService.IntegrationTests/Dockerfile --tag vmedummyjson:latest
     
     - name: Run Tests
       run: |
