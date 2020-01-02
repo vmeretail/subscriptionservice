@@ -58,6 +58,16 @@
         {
             Console.WriteLine("In the ctor");
 
+            String url = $"http://127.0.0.1:32768/ping";
+
+            HttpClient client = new HttpClient();
+
+            var response = client.GetAsync(url).Result;
+
+            Console.WriteLine(response.StatusCode);
+
+            Console.WriteLine("after test code");
+
             this.DockerHelper = new DockerHelper();
 
             // Start the Event Store & Dummy API
