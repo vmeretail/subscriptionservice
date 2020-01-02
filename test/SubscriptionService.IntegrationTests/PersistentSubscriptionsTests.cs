@@ -67,15 +67,10 @@
 
             this.EventStoreHttpClient = this.GetHttpClient();
 
-            //this.LogMessageToTrace("About to Ping ES on 127.0.0.1");
-            //var response = this.EventStoreHttpClient.GetAsync($"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/ping").Result;
-            //this.LogMessageToTrace($"After Ping ES on 127.0.0.1 {response.StatusCode}");
-
-            //this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
-            //    new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-            //this.ReadModelHttpClient = this.GetHttpClient();
-            //var result = this.ReadModelHttpClient.GetAsync($"http://127.0.0.1:{this.DockerHelper.DummyRESTHttpPort}/events").Result;
-            //this.LogMessageToTrace($"After GET RM on 127.0.0.1 {result.StatusCode}");
+            this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
+            this.ReadModelHttpClient = this.GetHttpClient();
+            
             // Build the Event Store Connection String 
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
 
@@ -109,17 +104,6 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_EventIsDelivered()
         {
-            String url = $"http://127.0.0.1:32768/ping";
-
-            HttpClient client = new HttpClient();
-
-            var response = await client.GetAsync(url);
-
-            Console.WriteLine(response.StatusCode);
-
-            Console.WriteLine("after test code");
-
-
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
             Guid aggregateId = Guid.NewGuid();
@@ -217,7 +201,6 @@
         /// <summary>
         /// Gets the HTTP client.
         /// </summary>
-        /// <param name="baseAddress">The base address.</param>
         /// <returns></returns>
         private HttpClient GetHttpClient()
         {
