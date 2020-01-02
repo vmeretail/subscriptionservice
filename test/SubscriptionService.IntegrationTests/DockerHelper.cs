@@ -5,6 +5,7 @@ using System.Text;
 namespace SubscriptionService.IntegrationTests
 {
     using System.Linq;
+    using System.Net.Http;
     using Ductus.FluentDocker.Builders;
     using Ductus.FluentDocker.Model.Builders;
     using Ductus.FluentDocker.Model.Containers;
@@ -54,19 +55,30 @@ namespace SubscriptionService.IntegrationTests
             this.EventStoreTcpPort = this.EventStoreContainer.ToHostExposedEndpoint("1113/tcp").Port;
             this.EventStoreHttpPort = this.EventStoreContainer.ToHostExposedEndpoint("2113/tcp").Port;
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
+
+            // Verify the Event Store is running
+            Retry.For(async() =>
+                      {
+                          String url = $"http://127.0.0.1:32768/ping";
+
+                          HttpClient client = new HttpClient();
+
+                          var response = await client.GetAsync(url);
+
+                      }).Wait();
         }
 
         public void StopContainersForScenarioRun()
         {
-            //if (this.EventStoreContainer != null)
-            //{
-            //    this.EventStoreContainer.ClearUpContainer();
-            //}
+            if (this.EventStoreContainer != null)
+            {
+                this.EventStoreContainer.ClearUpContainer();
+            }
 
-            //if (this.DummyRESTContainer != null)
-            //{
-            //    this.DummyRESTContainer.ClearUpContainer();
-            //}
+            if (this.DummyRESTContainer != null)
+            {
+                this.DummyRESTContainer.ClearUpContainer();
+            }
         }
 
         private static IContainerService CreateEventStoreContainer(String containerName,
