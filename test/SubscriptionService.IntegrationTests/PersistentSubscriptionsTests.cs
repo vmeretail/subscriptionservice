@@ -66,9 +66,9 @@
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
             this.EventStoreHttpClient = this.GetHttpClient();
-            this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-            this.ReadModelHttpClient = this.GetHttpClient();
+            //this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
+            //    new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
+            //this.ReadModelHttpClient = this.GetHttpClient();
 
             // Build the Event Store Connection String 
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
@@ -211,7 +211,7 @@
 
             IHttpClientFactory httpClientFactory = services.BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
 
-            HttpClient client = httpClientFactory.CreateClient(Guid.NewGuid().ToString());
+            HttpClient client = httpClientFactory.CreateClient();
 
             return client;
         }
