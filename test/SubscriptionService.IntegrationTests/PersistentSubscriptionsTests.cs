@@ -237,6 +237,11 @@
 
             Console.WriteLine($"PostEventToEventStore - uri is [{uri}]");
 
+            HttpClient http = new HttpClient();
+            await http.PostAsync(uri, new StringContent("", Encoding.UTF8, "application/json"));
+
+            Console.WriteLine($"PostEventToEventStore - manual post done");
+
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, uri);
             requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
             requestMessage.Headers.Add("ES-EventId", eventId.ToString());
