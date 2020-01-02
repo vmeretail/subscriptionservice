@@ -66,6 +66,11 @@
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
             this.EventStoreHttpClient = this.GetHttpClient();
+
+            this.LogMessageToTrace("About to Ping ES on 127.0.0.1");
+            var response = this.EventStoreHttpClient.GetAsync("http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/ping");
+            this.LogMessageToTrace("After Ping ES on 127.0.0.1");
+
             //this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
             //    new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
             //this.ReadModelHttpClient = this.GetHttpClient();
