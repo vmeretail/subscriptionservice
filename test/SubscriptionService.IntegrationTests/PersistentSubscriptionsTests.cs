@@ -10,6 +10,7 @@
     using System.Threading.Tasks;
     using Configuration;
     using EventStore.ClientAPI;
+    using Microsoft.Extensions.DependencyInjection;
     using Newtonsoft.Json;
     using Shouldly;
     using Xunit;
@@ -203,6 +204,12 @@
         /// <returns></returns>
         private HttpClient GetHttpClient()
         {
+            //IServiceCollection services = new ServiceCollection();
+
+            //services.AddHttpClient();
+
+            //Setup.HttpClientFactory = services.BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
+
             HttpClient client = new HttpClient();
 
             return client;
@@ -227,17 +234,9 @@
                                                  Guid eventId,
                                                  String streamName)
         {
-            TcpClient tcp = new TcpClient();
-            await tcp.ConnectAsync($"127.0.0.1", this.DockerHelper.EventStoreHttpPort);
-            Console.WriteLine($"Tcp Connected");
-            String uri = $"{this.EventStoreHttpClient.BaseAddress}/{streamName}";
+            String uri = $"{this.EventStoreHttpAddress}/{streamName}";
 
             Console.WriteLine($"PostEventToEventStore - uri is [{uri}]");
-
-            HttpClient http = new HttpClient();
-            await http.PostAsync(uri, new StringContent("", Encoding.UTF8, "application/json"));
-
-            Console.WriteLine($"PostEventToEventStore - manual post done");
 
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, uri);
             requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
