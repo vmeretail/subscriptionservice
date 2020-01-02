@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Net.Http;
     using System.Net.Http.Headers;
+    using System.Net.Sockets;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -229,6 +230,9 @@
                                                  Guid eventId,
                                                  String streamName)
         {
+            TcpClient tcp = new TcpClient();
+            await tcp.ConnectAsync($"127.0.0.1", this.DockerHelper.EventStoreTcpPort);
+
             String uri = $"{this.EventStoreHttpClient.BaseAddress}/{streamName}";
 
             Console.WriteLine($"PostEventToEventStore - uri is [{uri}]");
