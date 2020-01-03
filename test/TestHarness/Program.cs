@@ -10,6 +10,7 @@
     using SubscriptionService.Configuration;
 
     /// <summary>
+    /// 
     /// </summary>
     internal class Program
     {
@@ -35,9 +36,20 @@
             subscriptionService.OnEventAppeared += Program.SubscriptionService_OnEventAppeared;
 
             subscriptionService.TraceGenerated += Program.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += Program.SubscriptionService_ErrorHasOccured;
+
             await subscriptionService.Start(CancellationToken.None);
 
             Console.ReadKey();
+        }
+
+        /// <summary>
+        /// Subscriptions the service error has occured.
+        /// </summary>
+        /// <param name="trace">The trace.</param>
+        private static void SubscriptionService_ErrorHasOccured(String trace)
+        {
+            Console.WriteLine(trace);
         }
 
         /// <summary>
