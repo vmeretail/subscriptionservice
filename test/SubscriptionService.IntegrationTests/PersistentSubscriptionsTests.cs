@@ -9,6 +9,7 @@
     using System.Threading.Tasks;
     using Configuration;
     using EventStore.ClientAPI;
+    using Newtonsoft.Json;
     using Xunit;
 
     /// <summary>

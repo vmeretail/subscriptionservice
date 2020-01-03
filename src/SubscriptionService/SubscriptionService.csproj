@@ -12,6 +12,7 @@
     <RepositoryUrl>https://github.com/vmeretail/subscriptionservice</RepositoryUrl>
     <RepositoryType>GitHub</RepositoryType>
     <PackageTags>eventstore vme</PackageTags>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,10 +26,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\..\..\Users\steven.blair\Pictures\vme.png">
+    <EmbeddedResource Include="vme.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
-    </None>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
