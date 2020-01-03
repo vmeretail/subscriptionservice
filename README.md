@@ -1,6 +1,6 @@
 # Subscription Service for EventStore
 
-Lightweight and easy to use library, which allows you to manage you delivering events from persistent subscriptions.
+Lightweight and easy to use library, which allows you to manage delivering events from Event Store persistent subscriptions to configured endpoints.
 
 ## CI Status
 |||
