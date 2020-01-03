@@ -103,6 +103,8 @@
         /// </summary>
         public event TraceHandler TraceGenerated;
 
+        public event TraceHandler ErrorHasOccured;
+
         #endregion
 
         #region Methods
@@ -346,10 +348,7 @@
         /// <param name="trace">The trace.</param>
         private void Trace(String trace)
         {
-            if (this.TraceGenerated != null)
-            {
-                this.TraceGenerated(trace);
-            }
+            this.TraceGenerated?.Invoke(trace);
         }
 
         /// <summary>
@@ -358,9 +357,10 @@
         /// <param name="exception">The exception.</param>
         private void Trace(Exception exception)
         {
-            if (this.TraceGenerated != null)
+            if (this.ErrorHasOccured != null)
             {
-                this.TraceGenerated(exception.Message);
+                this.ErrorHasOccured(exception.Message);
+
                 if (exception.InnerException != null)
                 {
                     this.Trace(exception.InnerException);

@@ -23,6 +23,8 @@
 
         #region Events
 
+        event TraceHandler ErrorHasOccured;
+
         /// <summary>
         /// Occurs when [on event appeared].
         /// </summary>

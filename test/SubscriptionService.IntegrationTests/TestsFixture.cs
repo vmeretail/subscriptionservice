@@ -4,7 +4,6 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Net.Http;
-    using System.Net.Http.Headers;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -12,80 +11,42 @@
     using Microsoft.Extensions.DependencyInjection;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+    using NLog;
     using Shouldly;
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <seealso cref="System.IDisposable" />
     public class TestsFixture : IDisposable
     {
-        #region Constructors
+        #region Methods
+
+        public Logger Logger { get;  }
 
         public TestsFixture()
         {
-            // Do "global" initialization here; Only called once.
-            this.DockerHelper = new DockerHelper();
+            this.Logger = LogManager.GetLogger("SubscriptionService");
 
-            // Start the Event Store & Dummy API
-            this.DockerHelper.StartContainersForScenarioRun();
-            this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
-
-            this.EventStoreHttpClient = this.GetHttpClient();
-
-            this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-            this.ReadModelHttpClient = this.GetHttpClient();
-
-            // Build the Event Store Connection String 
-            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
-
-            // Setup the Event Store Connection
-            this.EventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            this.EventStoreConnection.Connected += this.EventStoreConnection_Connected;
-            this.EventStoreConnection.Closed += this.EventStoreConnection_Closed;
-            this.EventStoreConnection.ErrorOccurred += this.EventStoreConnection_ErrorOccurred;
-            this.EventStoreConnection.Reconnecting += this.EventStoreConnection_Reconnecting;
+            Logger.Info("Test startup");
         }
 
-        #endregion
-
-        #region Properties
-
         /// <summary>
-        /// The docker helper
+        /// Checks the events.
         /// </summary>
-        public DockerHelper DockerHelper { get; }
-
-        /// <summary>
-        /// The event store connection
-        /// </summary>
-        public IEventStoreConnection EventStoreConnection { get; }
-
-        /// <summary>
-        /// The event store HTTP address
-        /// </summary>
-        public String EventStoreHttpAddress { get; }
-
-        /// <summary>
-        /// The event store HTTP client
-        /// </summary>
-        public HttpClient EventStoreHttpClient { get; }
-
-        /// <summary>
-        /// The read model HTTP client
-        /// </summary>
-        public HttpClient ReadModelHttpClient { get; }
-
-        #endregion
-
-        #region Methods
-
-        public async Task CheckEvents(List<Guid> eventIds)
+        /// <param name="eventIds">The event ids.</param>
+        /// <param name="endpointUrl">The endpoint URL.</param>
+        /// <param name="readmodelHttpClient">The readmodel HTTP client.</param>
+        public async Task CheckEvents(List<Guid> eventIds,
+                                      String endpointUrl,
+                                      HttpClient readmodelHttpClient)
         {
-            String endPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
             List<Guid> foundEvents = new List<Guid>();
 
             await Retry.For(async () =>
                             {
-                                HttpResponseMessage responseMessage = await this.ReadModelHttpClient.GetAsync(endPointUrl, CancellationToken.None);
+                                HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl, CancellationToken.None);
+
                                 String responseContent = await responseMessage.Content.ReadAsStringAsync();
 
                                 if (String.IsNullOrEmpty(responseContent))
@@ -110,47 +71,13 @@
                             });
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
-            // Do "global" teardown here; Only called once.
-            this.EventStoreConnection.Close();
-
-            this.DockerHelper.StopContainersForScenarioRun();
-        }
-
-        /// <summary>
-        /// Logs the message to trace.
-        /// </summary>
-        /// <param name="traceMessage">The trace message.</param>
-        public void LogMessageToTrace(String traceMessage)
-        {
-            Console.WriteLine(traceMessage);
-        }
-
-        /// <summary>
-        /// Posts the event to event store.
-        /// </summary>
-        /// <param name="eventData">The event data.</param>
-        /// <param name="eventId">The event identifier.</param>
-        /// <param name="streamName">Name of the stream.</param>
-        public async Task PostEventToEventStore(Object eventData,
-                                                Guid eventId,
-                                                String streamName)
-        {
-            String uri = $"{this.EventStoreHttpAddress}/{streamName}";
-
-            Console.WriteLine($"PostEventToEventStore - uri is [{uri}]");
-
-            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, uri);
-            requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
-            requestMessage.Headers.Add("ES-EventId", eventId.ToString());
-            requestMessage.Content = new StringContent(JsonConvert.SerializeObject(eventData), Encoding.UTF8, "application/json");
-
-            HttpResponseMessage responseMessage = await this.EventStoreHttpClient.SendAsync(requestMessage);
-
-            Console.WriteLine(responseMessage.StatusCode);
-
-            responseMessage.EnsureSuccessStatusCode();
+            //Global teardown
+            Logger.Info("Test teardown");
         }
 
         /// <summary>
@@ -158,8 +85,8 @@
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="ClientClosedEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_Closed(Object sender,
-                                                 ClientClosedEventArgs e)
+        public void EventStoreConnection_Closed(Object sender,
+                                                ClientClosedEventArgs e)
         {
             this.LogMessageToTrace($"Connection {e.Connection.ConnectionName} Closed [{e.Reason}]");
         }
@@ -169,8 +96,8 @@
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="ClientConnectionEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_Connected(Object sender,
-                                                    ClientConnectionEventArgs e)
+        public void EventStoreConnection_Connected(Object sender,
+                                                   ClientConnectionEventArgs e)
         {
             this.LogMessageToTrace($"Connection {e.Connection.ConnectionName} Connected");
         }
@@ -180,8 +107,8 @@
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="ClientErrorEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_ErrorOccurred(Object sender,
-                                                        ClientErrorEventArgs e)
+        public void EventStoreConnection_ErrorOccurred(Object sender,
+                                                       ClientErrorEventArgs e)
         {
             this.LogMessageToTrace($"Connection {e.Connection.ConnectionName} Error Occurred [{e.Exception}]");
         }
@@ -191,8 +118,8 @@
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="ClientReconnectingEventArgs" /> instance containing the event data.</param>
-        private void EventStoreConnection_Reconnecting(Object sender,
-                                                       ClientReconnectingEventArgs e)
+        public void EventStoreConnection_Reconnecting(Object sender,
+                                                      ClientReconnectingEventArgs e)
         {
             this.LogMessageToTrace($"Connection {e.Connection.ConnectionName} Reconnecting");
         }
@@ -201,7 +128,7 @@
         /// Gets the HTTP client.
         /// </summary>
         /// <returns></returns>
-        private HttpClient GetHttpClient()
+        public HttpClient GetHttpClient()
         {
             AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
 
@@ -213,6 +140,44 @@
             HttpClient client = httpClientFactory.CreateClient();
 
             return client;
+        }
+
+        /// <summary>
+        /// Logs the message to trace.
+        /// </summary>
+        /// <param name="traceMessage">The trace message.</param>
+        public void LogMessageToTrace(String traceMessage)
+        {
+            Console.WriteLine(traceMessage);
+
+            Logger.Info(traceMessage);
+        }
+
+
+        /// <summary>
+        /// Posts the event to event store.
+        /// </summary>
+        /// <param name="eventData">The event data.</param>
+        /// <param name="eventId">The event identifier.</param>
+        /// <param name="endpointUrl">The endpoint URL.</param>
+        /// <param name="httpClient">The HTTP client.</param>
+        public async Task PostEventToEventStore(Object eventData,
+                                                Guid eventId,
+                                                String endpointUrl,
+                                                HttpClient httpClient)
+        {
+            Console.WriteLine($"PostEventToEventStore - uri is [{endpointUrl}]");
+
+            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, endpointUrl);
+            requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
+            requestMessage.Headers.Add("ES-EventId", eventId.ToString());
+            requestMessage.Content = new StringContent(JsonConvert.SerializeObject(eventData), Encoding.UTF8, "application/json");
+
+            HttpResponseMessage responseMessage = await httpClient.SendAsync(requestMessage);
+
+            Console.WriteLine(responseMessage.StatusCode);
+
+            responseMessage.EnsureSuccessStatusCode();
         }
 
         #endregion
