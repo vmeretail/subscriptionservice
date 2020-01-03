@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace SubscriptionService.IntegrationTests
+﻿namespace SubscriptionService.IntegrationTests
 {
+    using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Net.Http;
     using Ductus.FluentDocker.Builders;
@@ -12,23 +10,44 @@ namespace SubscriptionService.IntegrationTests
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class DockerHelper
     {
-        private INetworkService TestNetwork;
+        #region Fields
 
-        private IContainerService EventStoreContainer;
-
+        /// <summary>
+        /// The dummy rest container
+        /// </summary>
         private IContainerService DummyRESTContainer;
 
+        /// <summary>
+        /// The event store container
+        /// </summary>
+        private IContainerService EventStoreContainer;
+
+        /// <summary>
+        /// The test identifier
+        /// </summary>
         private Guid TestId;
 
         /// <summary>
-        /// Gets the event store TCP port.
+        /// The test network
+        /// </summary>
+        private INetworkService TestNetwork;
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets the dummy rest HTTP port.
         /// </summary>
         /// <value>
-        /// The event store TCP port.
+        /// The dummy rest HTTP port.
         /// </value>
-        public Int32 EventStoreTcpPort { get; private set; }
+        public Int32 DummyRESTHttpPort { get; private set; }
 
         /// <summary>
         /// Gets the event store HTTP port.
@@ -38,15 +57,28 @@ namespace SubscriptionService.IntegrationTests
         /// </value>
         public Int32 EventStoreHttpPort { get; private set; }
 
-        public Int32 DummyRESTHttpPort { get; private set; }
+        /// <summary>
+        /// Gets the event store TCP port.
+        /// </summary>
+        /// <value>
+        /// The event store TCP port.
+        /// </value>
+        public Int32 EventStoreTcpPort { get; private set; }
 
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Starts the containers for scenario run.
+        /// </summary>
         public void StartContainersForScenarioRun()
         {
             this.TestId = Guid.NewGuid();
 
             this.TestNetwork = new Builder().UseNetwork($"test-network-{Guid.NewGuid():N}").Build();
 
-            this.EventStoreContainer = CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, "");
+            this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, "");
             this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, "");
 
             this.EventStoreContainer.Start();
@@ -57,17 +89,19 @@ namespace SubscriptionService.IntegrationTests
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
 
             // Verify the Event Store is running
-            Retry.For(async() =>
+            Retry.For(async () =>
                       {
-                          String url = $"http://127.0.0.1:32768/ping";
+                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
 
                           HttpClient client = new HttpClient();
 
-                          var response = await client.GetAsync(url);
-
+                          HttpResponseMessage response = await client.GetAsync(url);
                       }).Wait();
         }
 
+        /// <summary>
+        /// Stops the containers for scenario run.
+        /// </summary>
         public void StopContainersForScenarioRun()
         {
             if (this.EventStoreContainer != null)
@@ -81,33 +115,53 @@ namespace SubscriptionService.IntegrationTests
             }
         }
 
-        private static IContainerService CreateEventStoreContainer(String containerName,
-                                                                   INetworkService networkService,
-                                                                   String mountDirectory)
-        {
-            IContainerService container = new Ductus.FluentDocker.Builders.Builder()
-                                          .UseContainer().UseImage("eventstore/eventstore:release-5.0.5").ExposePort(2113).ExposePort(1113).WithName(containerName)
-                                          .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
-                                          .Mount(mountDirectory, "/var/log/eventstore/", MountType.ReadWrite).UseNetwork(networkService)
-                                          .WaitForPort("2113/tcp", 30000 /*30s*/).Build();
-
-            return container;
-        }
-
+        /// <summary>
+        /// Creates the dummy rest container.
+        /// </summary>
+        /// <param name="containerName">Name of the container.</param>
+        /// <param name="networkService">The network service.</param>
+        /// <param name="mountDirectory">The mount directory.</param>
+        /// <returns></returns>
         private static IContainerService CreateDummyRESTContainer(String containerName,
                                                                   INetworkService networkService,
                                                                   String mountDirectory)
         {
-            IContainerService container = new Ductus.FluentDocker.Builders.Builder().UseContainer().UseImage("vmedummyjsonapi").ExposePort(80)
-                                                                                    .WithName(containerName).UseNetwork(networkService)
-                                                                                    .WaitForPort("80/tcp", 30000 /*30s*/).Build();
+            IContainerService container = new Builder().UseContainer().UseImage(@"vmeretailsystems/vmedummyjson:latest").ExposePort(80)
+                                                       .WithName(containerName).UseNetwork(networkService).WaitForPort("80/tcp", 30000 /*30s*/).Build();
 
             return container;
         }
+
+        /// <summary>
+        /// Creates the event store container.
+        /// </summary>
+        /// <param name="containerName">Name of the container.</param>
+        /// <param name="networkService">The network service.</param>
+        /// <param name="mountDirectory">The mount directory.</param>
+        /// <returns></returns>
+        private static IContainerService CreateEventStoreContainer(String containerName,
+                                                                   INetworkService networkService,
+                                                                   String mountDirectory)
+        {
+            IContainerService container = new Builder().UseContainer().UseImage("eventstore/eventstore:release-5.0.5").ExposePort(2113).ExposePort(1113)
+                                                       .WithName(containerName)
+                                                       .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
+                                                       .Mount(mountDirectory, "/var/log/eventstore/", MountType.ReadWrite).UseNetwork(networkService)
+                                                       .WaitForPort("2113/tcp", 30000 /*30s*/).Build();
+
+            return container;
+        }
+
+        #endregion
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public static class DockerExtension
     {
+        #region Methods
+
         /// <summary>
         /// ClearUpContainer the container.
         /// </summary>
@@ -140,5 +194,7 @@ namespace SubscriptionService.IntegrationTests
                 volumeService.Dispose();
             }
         }
+
+        #endregion
     }
 }
