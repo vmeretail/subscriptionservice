@@ -41,6 +41,30 @@
         /// </value>
         public String StreamName { get; set; }
 
+        /// <summary>
+        /// Gets the stream start position.
+        /// </summary>
+        /// <value>
+        /// The stream start position.
+        /// </value>
+        public Int32 StreamStartPosition { get; set; }
+
+        /// <summary>
+        /// Gets the maximum retry count.
+        /// </summary>
+        /// <value>
+        /// The maximum retry count.
+        /// </value>
+        public Int32 MaxRetryCount { get; set; }
+
+        /// <summary>
+        /// Gets the number of concurrent messages.
+        /// </summary>
+        /// <value>
+        /// The number of concurrent messages.
+        /// </value>
+        public Int32 NumberOfConcurrentMessages { get; set; }
+
         #endregion
     }
 }

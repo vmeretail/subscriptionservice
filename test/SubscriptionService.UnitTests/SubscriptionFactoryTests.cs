@@ -6,6 +6,7 @@
     using Factories;
     using Shouldly;
     using Xunit;
+    using Subscription = global::SubscriptionService.Domain.Subscription;
 
     public class SubscriptionFactoryTests
     {
@@ -25,19 +26,22 @@
             var subscriptionConfiguration = TestData.Subscriptions.First();
 
             // 2. Act
-            var subscription = subscriptionFactory.CreateFrom(subscriptionConfiguration);
+            Subscription subscription = subscriptionFactory.CreateFrom(subscriptionConfiguration);
 
             // 3. Assert
             subscription.ShouldNotBeNull();
 
+            subscription.HttpClient.ShouldNotBeNull();
+            subscription.EndPointUri.AbsolutePath.ShouldBe(subscriptionConfiguration.EndPointUri.AbsolutePath);
             subscription.GroupName.ShouldBe(subscriptionConfiguration.GroupName);
             subscription.StreamName.ShouldBe(subscriptionConfiguration.StreamName);
-            subscription.EndPointUri.ShouldBe(subscriptionConfiguration.EndPointUri);
-            subscription.HttpClient.ShouldNotBeNull();
+            subscription.MaxRetryCount.ShouldBe(subscriptionConfiguration.MaxRetryCount);
+            subscription.NumberOfConcurrentMessages.ShouldBe(subscriptionConfiguration.NumberOfConcurrentMessages);
+            subscription.StreamStartPosition.ShouldBe(subscriptionConfiguration.StreamStartPosition);
         }
 
         [Fact]
-        public void SubscriptionFactory_NullPassedAsSusbcription_ErrorThrown()
+        public void SubscriptionFactory_NullPassedAsSubscription_ErrorThrown()
         {
             // 1. Arrange
             SubscriptionFactory subscriptionFactory = new SubscriptionFactory();

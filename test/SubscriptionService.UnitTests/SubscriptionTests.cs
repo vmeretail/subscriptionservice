@@ -1,7 +1,9 @@
 ﻿namespace SubscriptionService.UnitTests
 {
     using System;
+    using System.Runtime.InteropServices;
     using Configuration;
+    using EventStore.ClientAPI;
     using Factories;
     using Shouldly;
     using Xunit;
@@ -22,6 +24,10 @@
             subscription.StreamName.ShouldBe(TestData.StreamName);
             subscription.GroupName.ShouldBe(TestData.GroupName);
             subscription.EndPointUri.AbsoluteUri.ShouldBe(TestData.Url);
+            subscription.MaxRetryCount.ShouldBe(Subscription.DefaultMaxRetryCount);
+            subscription.NumberOfConcurrentMessages.ShouldBe(Subscription.DefaultNumberOfConcurrentMessages);
+            subscription.StreamStartPosition.ShouldBe(Subscription.DefaultStreamStartPosition);
+
         }
 
         [Fact]
@@ -35,6 +41,9 @@
             subscription.StreamName.ShouldBe(TestData.StreamName);
             subscription.GroupName.ShouldBe(TestData.GroupName);
             subscription.EndPointUri.AbsoluteUri.ShouldBe(TestData.Url);
+            subscription.MaxRetryCount.ShouldBe(Subscription.DefaultMaxRetryCount);
+            subscription.NumberOfConcurrentMessages.ShouldBe(Subscription.DefaultNumberOfConcurrentMessages);
+            subscription.StreamStartPosition.ShouldBe(Subscription.DefaultStreamStartPosition);
         }
 
         [Fact]
@@ -51,8 +60,77 @@
             subscription.StreamName.ShouldBe(TestData.StreamName);
             subscription.GroupName.ShouldBe(TestData.GroupName);
             subscription.EndPointUri.Equals(endpointUri).ShouldBeTrue();
+            subscription.MaxRetryCount.ShouldBe(Subscription.DefaultMaxRetryCount);
+            subscription.NumberOfConcurrentMessages.ShouldBe(Subscription.DefaultNumberOfConcurrentMessages);
+            subscription.StreamStartPosition.ShouldBe(Subscription.DefaultStreamStartPosition);
         }
 
+        [Fact]
+        public void Subscription_OptionalValuesPassed_EndpointAsString_SubscriptionCreated()
+        {
+            // 2. Act
+            Subscription subscription = Subscription.Create(TestData.StreamName, TestData.GroupName, TestData.Url, TestData.NumberOfConcurrentMessages, TestData.MaxRetryCount, TestData.StreamStartPosition);
+
+            // 3. Assert
+            subscription.ShouldNotBeNull();
+            subscription.StreamName.ShouldBe(TestData.StreamName);
+            subscription.GroupName.ShouldBe(TestData.GroupName);
+            subscription.EndPointUri.AbsoluteUri.ShouldBe(TestData.Url);
+            subscription.MaxRetryCount.ShouldBe(TestData.MaxRetryCount);
+            subscription.NumberOfConcurrentMessages.ShouldBe(TestData.NumberOfConcurrentMessages);
+            subscription.StreamStartPosition.ShouldBe(TestData.StreamStartPosition);
+        }
+
+        [Fact]
+        public void Subscription_OptionalValuesPassed_EndpointAsUrl_SubscriptionCreated()
+        {
+            // 1. Arrange
+            Uri endpointUri = new Uri(TestData.Url);
+
+            // 2. Act
+            Subscription subscription = Subscription.Create(TestData.StreamName, TestData.GroupName, TestData.Url, TestData.NumberOfConcurrentMessages, TestData.MaxRetryCount, TestData.StreamStartPosition);
+
+            // 3. Assert
+            subscription.ShouldNotBeNull();
+            subscription.StreamName.ShouldBe(TestData.StreamName);
+            subscription.GroupName.ShouldBe(TestData.GroupName);
+            subscription.EndPointUri.Equals(endpointUri).ShouldBeTrue();
+            subscription.MaxRetryCount.ShouldBe(TestData.MaxRetryCount);
+            subscription.NumberOfConcurrentMessages.ShouldBe(TestData.NumberOfConcurrentMessages);
+            subscription.StreamStartPosition.ShouldBe(TestData.StreamStartPosition);
+        }
+
+        [Theory]
+        [InlineData(-1, 1, 1)]
+        [InlineData(1, -1, 1)]
+        [InlineData(1, 1, -1)]
+        [InlineData(-1, -1, 1)]
+        [InlineData(1, -1, -1)]
+        [InlineData(-1, 1, -1)]
+        [InlineData(-1, -1, -1)]
+        public void Subscription_OptionalValuesPassed_InvalidValues_EndpointAsString_SubscriptionCreated(Int32 numberOfConcurrentMessages, Int32 maxRetryCount, Int32 streamStartPosition)
+        {
+            // 2. Act
+            Should.Throw<ArgumentOutOfRangeException>(() => Subscription.Create(TestData.StreamName, TestData.GroupName, TestData.Url, numberOfConcurrentMessages, maxRetryCount, streamStartPosition));
+        }
+
+        [Theory]
+        [InlineData(-1, 1, 1)]
+        [InlineData(1, -1, 1)]
+        [InlineData(1, 1, -1)]
+        [InlineData(-1, -1, 1)]
+        [InlineData(1, -1, -1)]
+        [InlineData(-1, 1, -1)]
+        [InlineData(-1, -1, -1)]
+        public void Subscription_OptionalValuesPassed_InvalidValues_EndpointAsUrl_SubscriptionCreated(Int32 numberOfConcurrentMessages, Int32 maxRetryCount, Int32 streamStartPosition)
+        {
+            // 1. Arrange
+            Uri endpointUri = new Uri(TestData.Url);
+
+            // 2. Act
+            Should.Throw<ArgumentOutOfRangeException>(() => Subscription.Create(TestData.StreamName, TestData.GroupName, endpointUri, numberOfConcurrentMessages, maxRetryCount, streamStartPosition));
+        }
+        
         [Theory]
         [InlineData("")]
         [InlineData(null)]

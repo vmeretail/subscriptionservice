@@ -29,17 +29,6 @@ jobs:
 
     - name: Build Code
       run: dotnet build SubscriptionService.sln --configuration Release
-
-    - name: Run Unit Tests
-      run: |
-        echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
-        dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
-
-    - name: Build Dummy REST docker image
-      uses: buildtool/build-action@v1
-      with:
-        # specify Dockerfile to use
-        dockerfile: test\SubscriptionService.IntegrationTests\Dockerfile
     
     - name: Run Tests
       run: |
