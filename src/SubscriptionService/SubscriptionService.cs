@@ -143,8 +143,6 @@
         private async Task ConnectToSubscription(Subscription subscription,
                                                  CancellationToken cancellationToken)
         {
-            Int32 bufferSize = 10;
-
             Action<EventStorePersistentSubscriptionBase, ResolvedEvent> eventAppearedAction = async (eventStorePersistentSubscriptionBase,
                                                                                                      resolvedEvent) =>
                                                                                               {
@@ -168,13 +166,14 @@
             async Task ConnectToPersistentSubscriptionAsync()
             {
                 await this.EventStoreConnection.ConnectToPersistentSubscriptionAsync(subscription.StreamName,
-                                                                                     subscription.GroupName,
-                                                                                     eventAppearedAction,
-                                                                                     subscriptionDroppedAction,
-                                                                                     null,
-                                                                                     bufferSize,
-                                                                                     false);
+                                                                                                                                   subscription.GroupName,
+                                                                                                                                   eventAppearedAction,
+                                                                                                                                   subscriptionDroppedAction,
+                                                                                                                                   null,
+                                                                                                                                   subscription.NumberOfConcurrentMessages,
+                                                                                                                                   false);
             }
+
 
             try
             {
@@ -185,7 +184,7 @@
                 if (e.InnerException != null && e.InnerException.Message == "Subscription not found")
                 {
                     //Create the Group
-                    await this.CreatePersistentSubscriptionFromBeginningAsync(subscription.StreamName, subscription.GroupName, cancellationToken);
+                    await this.CreatePersistentSubscriptionFromBeginningAsync(subscription, cancellationToken);
 
                     await ConnectToPersistentSubscriptionAsync();
                 }
@@ -199,16 +198,23 @@
         /// <summary>
         /// Creates the persistent subscription from beginning asynchronous.
         /// </summary>
-        /// <param name="stream">The stream.</param>
-        /// <param name="groupName">Name of the group.</param>
+        /// <param name="subscription">The subscription.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        private async Task CreatePersistentSubscriptionFromBeginningAsync(String stream,
-                                                                          String groupName,
+        private async Task CreatePersistentSubscriptionFromBeginningAsync(Subscription subscription,
                                                                           CancellationToken cancellationToken)
         {
-            PersistentSubscriptionSettingsBuilder settings = this.GetDefaultPersistentSubscriptionSettingsBuilder().StartFromBeginning();
+            PersistentSubscriptionSettingsBuilder settings = this.GetDefaultPersistentSubscriptionSettingsBuilder().WithMaxRetriesOf(subscription.MaxRetryCount);
+            if (subscription.StreamStartPosition == 0)
+            {
+                settings.StartFromBeginning();
+            }
+            else
+            {
+                settings.StartFrom(subscription.StreamStartPosition);
+            }
+            
 
-            await this.EventStoreConnection.CreatePersistentSubscriptionAsync(stream, groupName, settings, this.DefaultUserCredentials);
+            await this.EventStoreConnection.CreatePersistentSubscriptionAsync(subscription.StreamName, subscription.GroupName, settings, this.DefaultUserCredentials);
         }
 
         /// <summary>

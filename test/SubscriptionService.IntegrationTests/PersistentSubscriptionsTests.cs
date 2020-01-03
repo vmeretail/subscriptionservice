@@ -9,6 +9,8 @@
     using System.Threading.Tasks;
     using Configuration;
     using EventStore.ClientAPI;
+    using Newtonsoft.Json;
+    using Shouldly;
     using Xunit;
 
     /// <summary>
@@ -175,6 +177,86 @@
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
         }
+
+        [Fact]
+        public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
+        {
+            // 1. Arrange
+            List<Subscription> subscriptionList = new List<Subscription>();
+            String streamName = $"$ce-SalesTransactionAggregate";
+            String groupName = "TestGroup";
+            subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
+
+            // 2. Act
+            await this.EventStoreConnection.ConnectAsync();
+
+            SubscriptionService subscriptionService = new SubscriptionService(subscriptionList, this.EventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+
+            await subscriptionService.Start(CancellationToken.None);
+
+            // 3. Assert
+            subscriptionList.ForEach(async (s) => await CheckSubscriptionHasBeenCreated(s));
+
+            // 4. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+        }
+
+        [Fact]
+        public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
+        {
+            // 1. Arrange
+            List<Subscription> subscriptionList = new List<Subscription>();
+            String streamName = $"$ce-SalesTransactionAggregate";
+            String groupName = "TestGroup";
+            Int32 startFrom = 50;
+            Int32 maxRetryCount = 1;
+            subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl,maxRetryCount:maxRetryCount, streamStartPosition:startFrom ));
+
+            // 2. Act
+            await this.EventStoreConnection.ConnectAsync();
+
+            SubscriptionService subscriptionService = new SubscriptionService(subscriptionList, this.EventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+
+            await subscriptionService.Start(CancellationToken.None);
+
+            // 3. Assert
+            subscriptionList.ForEach(async (s) => await CheckSubscriptionHasBeenCreated(s));
+
+            // 4. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+        }
+
+        public async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
+        {
+            String uri = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{subscription.StreamName}/{subscription.GroupName}/info";
+            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
+            requestMessage.Headers.Add("Accept", @"application/json");
+            var responseMessage = await this.EventStoreHttpClient.SendAsync(requestMessage, CancellationToken.None);
+
+            var jester = new
+                         {
+                             groupName = String.Empty,
+                             eventStreamId = String.Empty,
+                             config = new
+                                      {
+                                          startFrom = 0,
+                                          maxRetryCount = 0
+                                      }
+                         };
+            String responseContent = await responseMessage.Content.ReadAsStringAsync();
+            var subscriptionInfo = JsonConvert.DeserializeAnonymousType(responseContent, jester);
+
+            subscriptionInfo.groupName.ShouldBe(subscription.GroupName);
+            subscriptionInfo.eventStreamId.ShouldBe(subscription.StreamName);
+            subscriptionInfo.config.ShouldNotBeNull();
+            subscriptionInfo.config.maxRetryCount.ShouldBe(subscription.MaxRetryCount);
+            subscriptionInfo.config.startFrom.ShouldBe(subscription.StreamStartPosition);
+        }
+
 
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.

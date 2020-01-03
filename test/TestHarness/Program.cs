@@ -28,8 +28,8 @@
             await eventStoreConnection.ConnectAsync();
 
             List<Subscription> subscriptions = new List<Subscription>();
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", "https://enc6iva61l9nl.x.pipedream.net"));
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", new Uri("https://enc6iva61l9nl.x.pipedream.net")));
+            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", "https://enyx4bscr5t6k.x.pipedream.net/", numberOfConcurrentMessages: 2, maxRetryCount:1));
+            //subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", new Uri("https://enc6iva61l9nl.x.pipedream.net")));
 
             ISubscriptionService subscriptionService = new SubscriptionService(subscriptions, eventStoreConnection);
 

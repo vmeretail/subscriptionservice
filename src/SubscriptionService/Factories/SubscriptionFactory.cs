@@ -31,7 +31,10 @@
                                                   HttpClient = new HttpClient
                                                                {
                                                                    BaseAddress = subscription.EndPointUri
-                                                               }
+                                                               },
+                                                  MaxRetryCount = subscription.MaxRetryCount,
+                                                  NumberOfConcurrentMessages = subscription.NumberOfConcurrentMessages,
+                                                  StreamStartPosition = subscription.StreamStartPosition
                                               };
 
             return subscriptionDomain;
