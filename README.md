@@ -1,4 +1,4 @@
-# Subscription Service
+# Subscription Service for EventStore
 
 Lightweight and easy to use library, which allows you to manage you delivering events from persistent subscriptions.
 
