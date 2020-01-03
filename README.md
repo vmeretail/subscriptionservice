@@ -16,7 +16,7 @@ https://www.nuget.org/packages/EventStore.SubscriptionService/
 
 Alternatively, from the command line:
 
-Install-Package EventStore.SubscriptionService -Version 0.0.0-alpha
+Install-Package EventStore.SubscriptionService
 
 ## Usage
 
@@ -65,7 +65,3 @@ private static void SubscriptionService_OnEventAppeared(object sender, System.Ne
     e.Headers.Add("Authorization", $"Bearer someToken");
 }
 ```
-
-## Running Tests (unit and intergration)
-
-TODO:
