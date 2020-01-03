@@ -11,6 +11,7 @@
     using Microsoft.Extensions.DependencyInjection;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+    using NLog;
     using Shouldly;
 
     /// <summary>
@@ -20,6 +21,15 @@
     public class TestsFixture : IDisposable
     {
         #region Methods
+
+        public Logger Logger { get;  }
+
+        public TestsFixture()
+        {
+            this.Logger = LogManager.GetLogger("SubscriptionService");
+
+            Logger.Info("Test startup");
+        }
 
         /// <summary>
         /// Checks the events.
@@ -67,6 +77,7 @@
         public void Dispose()
         {
             //Global teardown
+            Logger.Info("Test teardown");
         }
 
         /// <summary>
@@ -138,6 +149,8 @@
         public void LogMessageToTrace(String traceMessage)
         {
             Console.WriteLine(traceMessage);
+
+            Logger.Info(traceMessage);
         }
 
 
