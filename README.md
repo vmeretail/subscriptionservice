@@ -28,8 +28,7 @@ String connectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;Verbose
 IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(new Uri(connectionString));
 
 List<Subscription> subscriptions = new List<Subscription>();
-
-Subscription.Create("$ce-Accounts", "Read Model", new Uri("http://127.0.0.1/api/events"));
+subscriptions.Add(Subscription.Create("$ce-Accounts", "Read Model", new Uri("http://127.0.0.1/api/events")));
 
 //You are responsible for the connection.
 await eventStoreConnection.ConnectAsync();
