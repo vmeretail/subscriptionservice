@@ -2,6 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Description>Lightweight and easy to use library, which allows you to manage you delivering events from persistent subscriptions.</Description>
+    <Company>VME Retail Ltd</Company>
+    <Authors>VME Retail Ltd</Authors>
+    <Copyright>VME Retail Ltd</Copyright>
+    <PackageProjectUrl>https://github.com/vmeretail/subscriptionservice</PackageProjectUrl>
+    <PackageIcon>vme.png</PackageIcon>
+    <PackageIconUrl />
+    <RepositoryUrl>https://github.com/vmeretail/subscriptionservice</RepositoryUrl>
+    <RepositoryType>GitHub</RepositoryType>
+    <PackageTags>eventstore vme</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +22,13 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>SubscriptionService.UnitTests</_Parameter1>
     </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\..\Users\steven.blair\Pictures\vme.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
