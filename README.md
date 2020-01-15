@@ -6,7 +6,9 @@ Lightweight and easy to use library, which allows you to manage delivering event
 |||
 | --- | --- |
 | **Build** | [![Build status](https://github.com/vmeretail/subscriptionservice/workflows/Release/badge.svg)](https://github.com/vmeretail/subscriptionservice/actions) |
-| **NuGet** | [![nuget](https://img.shields.io/nuget/v/EventStore.SubscriptionService.svg)](https://www.nuget.org/packages/EventStore.SubscriptionService/)
+| **NuGet** | [![nuget](https://img.shields.io/nuget/v/EventStore.SubscriptionService.svg)](https://www.nuget.org/packages/EventStore.SubscriptionService/) 
+| **Downloads**| [![nuget](https://img.shields.io/nuget/dt/EventStore.SubscriptionService.svg)](https://www.nuget.org/packages/EventStore.SubscriptionService/) |
+
 
 ## Nuget
 
