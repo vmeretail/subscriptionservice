@@ -1,12 +1,11 @@
-﻿using System;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
-    using EventStore.ClientAPI;
+    using System;
     using System.Collections.Generic;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
+    using EventStore.ClientAPI;
     using SubscriptionService;
     using SubscriptionService.Configuration;
 
@@ -21,7 +20,7 @@ namespace ConsoleApplication
         private static async Task Main(String[] args)
         {
             // This example assumes you have an event store running locally on the default ports with the default username and password
-            // If your eventstore connectionn information is different then update this connection string variable to point to your event store
+            // If your eventstore connection information is different then update this connection string variable to point to your event store
             String connectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
 
             // The subscription service requires an open connection to operate so create and open the connection here
@@ -43,8 +42,8 @@ namespace ConsoleApplication
             // Stream Start Position - Position that the persistent subscription will start form, this will normally be zero but this value can be used to ignore events
             //                         in a stream for example the events are malformed so you wish not to process these
             List<Subscription> subscriptions = new List<Subscription>();
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages: 2, maxRetryCount: 1));
-            
+            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages:2, maxRetryCount:1));
+
             ISubscriptionService subscriptionService = new SubscriptionService(subscriptions, eventStoreConnection);
 
             // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 

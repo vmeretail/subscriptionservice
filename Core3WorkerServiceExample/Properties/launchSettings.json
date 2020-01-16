@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "Core3WorkerServiceExample": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
