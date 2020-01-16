@@ -1,13 +1,19 @@
 categories:
   - title: '🚀 Features'
     labels:
-      - 'enhancement'      
+      - 'enhancement'  
+      - 'feature'
   - title: '🐛 Bug Fixes'
     labels:
       - 'bug'
   - title: '🧰 Maintenance'
-    label: 'workflows'
+    labels: 
+      - 'workflows'
+      - 'documentation'
+      - 'examples'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+exclude-labels:
+  - 'skip-changelog'
 template: |
   ## Changes
   $CHANGES
