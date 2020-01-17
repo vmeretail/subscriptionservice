@@ -1,6 +1,7 @@
 ﻿namespace SubscriptionService
 {
     using System;
+    using System.Collections.Generic;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
@@ -42,9 +43,10 @@
         /// <summary>
         /// Start with no config
         /// </summary>
+        /// <param name="subscriptions">The subscriptions.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns></returns>
-        Task Start(CancellationToken cancellationToken);
+        Task Start(List<Configuration.Subscription> subscriptions, CancellationToken cancellationToken);
 
         /// <summary>
         /// Stop the service

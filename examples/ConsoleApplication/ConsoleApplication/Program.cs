@@ -28,7 +28,7 @@
             await eventStoreConnection.ConnectAsync();
 
             // The subscription service requires an HTTP endpoint to post event data to, for this example we are using RequestBin (https://requestbin.com/)
-            // To run the example either replace the Url below with one of your own endpoints or create a new one on RequestBin or a similair service and
+            // To run the example either replace the Url below with one of your own endpoints or create a new one on RequestBin or a similar service and
             // update the Url below
             String endpointUrl = "https://enyx4bscr5t6k.x.pipedream.net/";
 
@@ -44,7 +44,8 @@
             List<Subscription> subscriptions = new List<Subscription>();
             subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages:2, maxRetryCount:1));
 
-            ISubscriptionService subscriptionService = new SubscriptionService(subscriptions, eventStoreConnection);
+            // Create instance of the class
+            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
 
             // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 
             // adding a Authorization token onto the HTTP POST (as demonstrated below)
@@ -59,8 +60,8 @@
             // these messages out in your own codebase if required
             subscriptionService.ErrorHasOccured += Program.SubscriptionService_ErrorHasOccured;
 
-            // Start the subscription service, this will create and connect to the subscriptions defined in your configuration
-            await subscriptionService.Start(CancellationToken.None);
+            // Start the subscription service with the passed in configuration, this will create and connect to the subscriptions defined in your configuration
+            await subscriptionService.Start(subscriptions, CancellationToken.None);
 
             Console.ReadKey();
         }

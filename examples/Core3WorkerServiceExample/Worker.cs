@@ -60,26 +60,8 @@ namespace Core3WorkerServiceExample
             this.Connection = EventStoreConnection.Create(Worker.EventStoreConnectionString);
             await this.Connection.ConnectAsync();
 
-            // The subscription service requires an HTTP endpoint to post event data to, for this example we are using RequestBin (https://requestbin.com/)
-            // To run the example either replace the Url below with one of your own endpoints or create a new one on RequestBin or a similair service and
-            // update the Url below
-            String endpointUrl = "https://enyx4bscr5t6k.x.pipedream.net/";
-
-            // Setup a list of persistent subscription objects, each one of these will represent a Persistent Subscription in the Event Store - Competing Consumers tab
-            // Each subscription allows the setting of the following values:
-            // Stream Name - the name of the Stream that will be listened to for Events
-            // Group Name - Name for the Group this will be used for display purposes in the Event Store UI
-            // EndPointUrl - HTTP Url that the event data will be POSTed to
-            // Number of Concurrent Messages - THe number of messages that will be concurrently processed by this subscription
-            // Max Retry Count - Number of times that the message will be retried if the first POST to the endpoint fails before it is NAK'd and parked in Event Store
-            // Stream Start Position - Position that the persistent subscription will start form, this will normally be zero but this value can be used to ignore events
-            //                         in a stream for example the events are malformed so you wish not to process these
-            this.Logger.LogInformation("About to Get Subscription Configuration");
-            List<Subscription> subscriptions = new List<Subscription>();
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages:2, maxRetryCount:1));
-
             // New up the Subscription Service instance
-            this.SubscriptionService = new SubscriptionService(subscriptions, this.Connection);
+            this.SubscriptionService = new SubscriptionService(this.Connection);
 
             // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 
             // adding a Authorization token onto the HTTP POST (as demonstrated below)
@@ -118,8 +100,26 @@ namespace Core3WorkerServiceExample
         /// <param name="stoppingToken">Triggered when <see cref="M:Microsoft.Extensions.Hosting.IHostedService.StopAsync(System.Threading.CancellationToken)" /> is called.</param>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // The subscription service requires an HTTP endpoint to post event data to, for this example we are using RequestBin (https://requestbin.com/)
+            // To run the example either replace the Url below with one of your own endpoints or create a new one on RequestBin or a similar service and
+            // update the Url below
+            String endpointUrl = "https://enyx4bscr5t6k.x.pipedream.net/";
+
+            // Setup a list of persistent subscription objects, each one of these will represent a Persistent Subscription in the Event Store - Competing Consumers tab
+            // Each subscription allows the setting of the following values:
+            // Stream Name - the name of the Stream that will be listened to for Events
+            // Group Name - Name for the Group this will be used for display purposes in the Event Store UI
+            // EndPointUrl - HTTP Url that the event data will be POSTed to
+            // Number of Concurrent Messages - THe number of messages that will be concurrently processed by this subscription
+            // Max Retry Count - Number of times that the message will be retried if the first POST to the endpoint fails before it is NAK'd and parked in Event Store
+            // Stream Start Position - Position that the persistent subscription will start form, this will normally be zero but this value can be used to ignore events
+            //                         in a stream for example the events are malformed so you wish not to process these
+            this.Logger.LogInformation("About to Get Subscription Configuration");
+            List<Subscription> subscriptions = new List<Subscription>();
+            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages: 2, maxRetryCount: 1));
+
             // Start the subscription service, this will create and connect to the subscriptions defined in your configuration
-            await this.SubscriptionService.Start(stoppingToken);
+            await this.SubscriptionService.Start(subscriptions, stoppingToken);
         }
 
         /// <summary>
