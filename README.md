@@ -35,9 +35,9 @@ subscriptions.Add(Subscription.Create("$ce-Accounts", "Read Model", new Uri("htt
 //You are responsible for the connection.
 await eventStoreConnection.ConnectAsync();
 
-SubscriptionService subscriptionService = new SubscriptionService(subscriptions, eventStoreConnection);
+SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
 
-await subscriptionService.Start(CancellationToken.None);
+await subscriptionService.Start(subscriptions, CancellationToken.None);
 ```
 
 The library will manage posting the event, and uses the follow default values for sending your events:

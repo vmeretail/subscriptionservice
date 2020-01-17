@@ -54,9 +54,11 @@
                                     throw new Exception();
                                 }
 
-                                this.LogMessageToTrace(responseContent);
+                                this.LogMessageToTrace($"Response from endpoint is [{responseContent}]");
 
-                                List<String> retrievedEvents = JArray.Parse(responseContent).Select(x => x["EventId"].Value<String>()).ToList();
+                                JArray jsonArray = JArray.Parse(responseContent);
+
+                                List<String> retrievedEvents = jsonArray.Select(x => x["EventId"].Value<String>()).ToList();
 
                                 if (retrievedEvents.Any() == false)
                                 {

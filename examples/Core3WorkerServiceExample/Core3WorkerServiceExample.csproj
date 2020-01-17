@@ -7,9 +7,12 @@
 
   <ItemGroup>
     <PackageReference Include="EventStore.Client" Version="5.0.5" />
-    <PackageReference Include="EventStore.SubscriptionService" Version="1.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="3.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="3.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SubscriptionService\SubscriptionService.csproj" />
   </ItemGroup>
 </Project>

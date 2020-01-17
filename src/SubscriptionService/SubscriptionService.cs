@@ -25,11 +25,6 @@
         /// </summary>
         private readonly IEventStoreConnection EventStoreConnection;
 
-        /// <summary>
-        /// The subscriptions
-        /// </summary>
-        private readonly List<Subscription> Subscriptions;
-
         #endregion
 
         #region Constructors
@@ -37,32 +32,19 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="SubscriptionService" /> class.
         /// </summary>
-        /// <param name="subscriptions">The subscriptions.</param>
         /// <param name="eventStoreConnection">The event store connection.</param>
         /// <param name="username">The username.</param>
         /// <param name="password">The password.</param>
-        public SubscriptionService(List<Configuration.Subscription> subscriptions,
-                                   IEventStoreConnection eventStoreConnection,
+        /// <exception cref="ArgumentNullException">Value cannot be null - eventStoreConnection</exception>
+        public SubscriptionService(IEventStoreConnection eventStoreConnection,
                                    String username = "admin",
                                    String password = "changeit")
         {
-            if (subscriptions == null || subscriptions.Any() == false)
-            {
-                throw new ArgumentNullException("Value cannot be null or empty", nameof(subscriptions));
-            }
-
             if (eventStoreConnection == null)
             {
                 throw new ArgumentNullException("Value cannot be null", nameof(eventStoreConnection));
             }
-
-            //Convert the Subscriptions to our internal model
-            SubscriptionFactory subscriptionFactory = new SubscriptionFactory();
-
-            this.Subscriptions = new List<Subscription>();
-
-            subscriptions.ForEach(s => this.Subscriptions.Add(subscriptionFactory.CreateFrom(s)));
-
+            
             this.EventStoreConnection = eventStoreConnection;
 
             // Cache the user credentials
@@ -112,10 +94,23 @@
         /// <summary>
         /// Start with no config
         /// </summary>
+        /// <param name="subscriptions">The subscriptions.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        public async Task Start(CancellationToken cancellationToken)
+        public async Task Start(List<Configuration.Subscription> subscriptions, CancellationToken cancellationToken)
         {
-            foreach (Subscription subscription in this.Subscriptions)
+            if (subscriptions == null || subscriptions.Any() == false)
+            {
+                throw new ArgumentNullException("Value cannot be null or empty", nameof(subscriptions));
+            }
+
+            //Convert the Subscriptions to our internal model
+            SubscriptionFactory subscriptionFactory = new SubscriptionFactory();
+
+            List<Subscription> subscriptionsList = new List<Subscription>();
+
+            subscriptions.ForEach(s => subscriptionsList.Add(subscriptionFactory.CreateFrom(s)));
+
+            foreach (Subscription subscription in subscriptionsList)
             {
                 await this.ConnectToSubscription(subscription, cancellationToken);
             }
