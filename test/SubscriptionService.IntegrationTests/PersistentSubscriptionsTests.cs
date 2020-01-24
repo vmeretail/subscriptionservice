@@ -9,6 +9,7 @@
     using System.Threading.Tasks;
     using Configuration;
     using EventStore.ClientAPI;
+    using Factories;
     using Newtonsoft.Json;
     using Shouldly;
     using Xunit;
@@ -129,6 +130,51 @@
 
         #region Methods
 
+        [Fact]
+        public async Task SubscriptionService_CustomEventFactoryUsed_TranslatedEventsEmitted()
+        {
+            // 1. Arrange
+            var sale1 = new
+                        {
+                            AggregateId = Guid.NewGuid()
+                        };
+
+            Guid eventId = Guid.NewGuid();
+
+            List<Subscription> subscriptionList = new List<Subscription>();
+
+            subscriptionList.Add(Subscription.Create($"$ce-SalesTransactionAggregate", "TestGroup", this.EndPointUrl));
+
+            await this.TestsFixture.PostEventToEventStore(sale1,
+                                                          eventId,
+                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
+                                                          this.EventStoreHttpClient);
+
+            // 2. Act
+            await this.EventStoreConnection.ConnectAsync();
+
+            IEventFactory testEventFactory = new TestEventFactory();
+
+            SubscriptionService subscriptionService = new SubscriptionService(testEventFactory,this.EventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+
+            await subscriptionService.Start(subscriptionList, CancellationToken.None);
+
+            // 3. Assert
+            await this.TestsFixture.CheckEvents(new List<Guid>
+                                                {
+                                                    eventId,
+                                                },
+                                                this.EndPointUrl,
+                                                this.ReadModelHttpClient);
+
+            // 4. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+        }
+    
+
+
         /// <summary>
         /// Subscriptions the service multiple events posted all events delivered.
         /// </summary>
@@ -171,6 +217,7 @@
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
+            //TODO: We could return the events to check new fields.
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {

@@ -18,6 +18,8 @@
     /// <seealso cref="ISubscriptionService" />
     public class SubscriptionService : ISubscriptionService
     {
+        private readonly IEventFactory EventFactory;
+
         #region Fields
 
         /// <summary>
@@ -38,13 +40,29 @@
         /// <exception cref="ArgumentNullException">Value cannot be null - eventStoreConnection</exception>
         public SubscriptionService(IEventStoreConnection eventStoreConnection,
                                    String username = "admin",
+                                   String password = "changeit") : this(Factories.EventFactory.Create(), eventStoreConnection,username,password)
+        {
+            
+        }
+        public SubscriptionService(IEventFactory eventFactory,
+                                   IEventStoreConnection eventStoreConnection,
+                                   String username = "admin",
                                    String password = "changeit")
         {
+
             if (eventStoreConnection == null)
             {
                 throw new ArgumentNullException("Value cannot be null", nameof(eventStoreConnection));
             }
-            
+
+            if (eventFactory == null)
+            {
+                //Create a default factory
+                eventFactory = Factories.EventFactory.Create();
+            }
+
+            this.EventFactory = eventFactory;
+
             this.EventStoreConnection = eventStoreConnection;
 
             // Cache the user credentials
@@ -246,9 +264,11 @@
 
                 this.Trace($"Event Id {resolvedEvent.Event.EventId} - EventAppearedFromPersistentSubscription");
 
-                //Build a standard WebRequest
-                String serialisedData = Encoding.Default.GetString(resolvedEvent.Event.Data, 0, resolvedEvent.Event.Data.Length);
+                RecordedEvent j = resolvedEvent.Event;
 
+                String serialisedData = this.EventFactory.ConvertFrom(resolvedEvent.Event);
+
+                //Build a standard WebRequest
                 HttpRequestMessage request = new HttpRequestMessage
                                              {
                                                  Method = HttpMethod.Post,

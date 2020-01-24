@@ -1,16 +1,13 @@
 ﻿namespace SubscriptionService.IntegrationTests
 {
     using System;
-    using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Linq;
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Threading;
     using Ductus.FluentDocker.Builders;
     using Ductus.FluentDocker.Model.Builders;
-    using Ductus.FluentDocker.Model.Containers;
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
     using Shouldly;
@@ -145,7 +142,7 @@
                                                                   INetworkService networkService,
                                                                   String mountDirectory)
         {
-            IContainerService container = new Builder().UseContainer().UseImage(@"vmeretailsystems/vmedummyjson:latest").ExposePort(80)
+            IContainerService container = new Builder().UseContainer().UseImage(@"vmeretailsystems/vmedummyjson:latest",true).ExposePort(80)
                                                        .WithName(containerName).UseNetwork(networkService).WaitForPort("80/tcp", 30000 /*30s*/).Build();
 
             return container;
@@ -162,56 +159,13 @@
                                                                    INetworkService networkService,
                                                                    String mountDirectory)
         {
-            IContainerService container = new Builder().UseContainer().UseImage("eventstore/eventstore:release-5.0.5").ExposePort(2113).ExposePort(1113)
+            IContainerService container = new Builder().UseContainer().UseImage("eventstore/eventstore:release-5.0.5",true).ExposePort(2113).ExposePort(1113)
                                                        .WithName(containerName)
                                                        .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
                                                        .Mount(mountDirectory, "/var/log/eventstore/", MountType.ReadWrite).UseNetwork(networkService)
                                                        .WaitForPort("2113/tcp", 30000 /*30s*/).Build();
 
             return container;
-        }
-
-        #endregion
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    public static class DockerExtension
-    {
-        #region Methods
-
-        /// <summary>
-        /// ClearUpContainer the container.
-        /// </summary>
-        /// <param name="containerService">The container service.</param>
-        public static void ClearUpContainer(this IContainerService containerService)
-        {
-            IList<IVolumeService> volumes = new List<IVolumeService>();
-            IList<INetworkService> networks = containerService.GetNetworks();
-
-            foreach (INetworkService networkService in networks)
-            {
-                networkService.Detatch(containerService, true);
-            }
-
-            // Doing a direct call to .GetVolumes throws an exception if there aren't any so we need to check first :|
-            IDictionary<String, VolumeMount> configurationVolumes = containerService.GetConfiguration(true).Config.Volumes;
-            if (configurationVolumes != null && configurationVolumes.Any())
-            {
-                volumes = containerService.GetVolumes();
-            }
-
-            containerService.StopOnDispose = true;
-            containerService.RemoveOnDispose = true;
-            containerService.Dispose();
-
-            foreach (IVolumeService volumeService in volumes)
-            {
-                volumeService.Stop();
-                volumeService.Remove(true);
-                volumeService.Dispose();
-            }
         }
 
         #endregion
