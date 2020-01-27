@@ -43,11 +43,14 @@
         private readonly String EndPointUrl1;
 
         /// <summary>
+        /// The test name
+        /// </summary>
+        private readonly String TestName;
+
+        /// <summary>
         /// The tests fixture
         /// </summary>
         private readonly TestsFixture TestsFixture;
-
-        private String TestName;
 
         #endregion
 
@@ -61,15 +64,45 @@
         public PersistentSubscriptionsTests(TestsFixture data,
                                             ITestOutputHelper output)
         {
+            this.TestsFixture = data;
+
             Type type = output.GetType();
             FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
             ITest test = (ITest)testMember.GetValue(output);
+            this.TestName = test.DisplayName;
 
-            TestName = test.DisplayName;
+            //String debugStr=null;
 
-            this.TestsFixture.LogMessageToTrace($"{TestName} starting");
+            //if (output == null)
+            //{
+            //    debugStr = "ITestOutputHelper is null ";
+            //}
+            //else
+            //{
+            //    Type type = output.GetType();
+            //    FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
 
-            this.TestsFixture = data;
+            //    if (testMember == null)
+            //    {
+            //        debugStr += "testMember is null ";
+            //    }
+            //    else
+            //    {
+            //        ITest test = (ITest)testMember.GetValue(output);
+
+            //        if (test == null)
+            //        {
+            //            debugStr += "test is null ";
+            //        }
+            //        else
+            //        {
+            //            TestName = test.DisplayName;
+            //        }
+
+            //    }
+            //}
+
+            this.TestsFixture.LogMessageToTrace($"{this.TestName} starting");
 
             this.DockerHelper = new DockerHelper();
 
@@ -174,12 +207,12 @@
         /// </summary>
         public void Dispose()
         {
-            this.TestsFixture.LogMessageToTrace($"{TestName} about to teardown");
+            this.TestsFixture.LogMessageToTrace($"{this.TestName} about to teardown");
 
             this.EventStoreConnection.Close();
             this.DockerHelper.StopContainersForScenarioRun();
 
-            this.TestsFixture.LogMessageToTrace($"{TestName} stopped.");
+            this.TestsFixture.LogMessageToTrace($"{this.TestName} stopped.");
         }
 
         /// <summary>
