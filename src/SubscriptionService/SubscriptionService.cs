@@ -398,7 +398,7 @@
         {
             if (this.ErrorHasOccured != null)
             {
-                this.ErrorHasOccured(exception.ToString());
+                this.ErrorHasOccured(exception.Message));
 
                 if (exception.InnerException != null)
                 {
