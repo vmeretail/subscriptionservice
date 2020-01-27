@@ -26,22 +26,8 @@
         /// </summary>
         public TestsFixture()
         {
-            this.Logger = LogManager.GetLogger("SubscriptionService");
-
             this.LogMessageToTrace("Test startup");
         }
-
-        #endregion
-
-        #region Properties
-
-        /// <summary>
-        /// Gets the logger.
-        /// </summary>
-        /// <value>
-        /// The logger.
-        /// </value>
-        public Logger Logger { get; }
 
         #endregion
 
@@ -95,7 +81,7 @@
         public void Dispose()
         {
             //Global teardown
-            this.Logger.Info("Test teardown");
+            this.LogMessageToTrace("Test teardown");
         }
 
         /// <summary>
@@ -198,9 +184,11 @@
         /// <param name="traceMessage">The trace message.</param>
         public void LogMessageToTrace(String traceMessage)
         {
+            Logger logger = LogManager.GetLogger("SubscriptionService");
+
             Console.WriteLine(traceMessage);
 
-            this.Logger.Info(traceMessage);
+            logger.Info(traceMessage);
         }
 
         /// <summary>
