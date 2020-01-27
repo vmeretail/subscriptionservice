@@ -21,7 +21,7 @@
         /// <param name="args">The arguments.</param>
         private static async Task Main(String[] args)
         {
-            String connectionString = "ConnectTo=tcp://admin:changeit@192.168.2.35:1113;VerboseLogging=true;";
+            String connectionString = "ConnectTo=tcp://admin:changeit@127.0.01:1113;VerboseLogging=true;";
 
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
