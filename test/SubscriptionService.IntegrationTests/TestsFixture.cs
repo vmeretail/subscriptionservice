@@ -28,7 +28,7 @@
         {
             this.Logger = LogManager.GetLogger("SubscriptionService");
 
-            this.Logger.Info("Test startup");
+            this.LogMessageToTrace("Test startup");
         }
 
         #endregion

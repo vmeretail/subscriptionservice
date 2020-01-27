@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Net.Http;
     using System.Net.Http.Headers;
+    using System.Reflection;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -13,11 +14,12 @@
     using Newtonsoft.Json.Linq;
     using Shouldly;
     using Xunit;
+    using Xunit.Abstractions;
 
     /// <summary>
-    /// 
     /// </summary>
     /// <seealso cref="Xunit.IClassFixture{SubscriptionService.IntegrationTests.TestsFixture}" />
+    /// <seealso cref="IntegrationTests.TestsFixture" />
     /// <seealso cref="IntegrationTests.TestsFixture" />
     /// <seealso cref="System.IDisposable" />
     [Collection("Database collection")]
@@ -45,6 +47,8 @@
         /// </summary>
         private readonly TestsFixture TestsFixture;
 
+        private String TestName;
+
         #endregion
 
         #region Constructors
@@ -53,10 +57,19 @@
         /// Initializes a new instance of the <see cref="PersistentSubscriptionsTests" /> class.
         /// </summary>
         /// <param name="data">The data.</param>
-        public PersistentSubscriptionsTests(TestsFixture data)
+        /// <param name="output">The output.</param>
+        public PersistentSubscriptionsTests(TestsFixture data,
+                                            ITestOutputHelper output)
         {
+            Type type = output.GetType();
+            FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
+            ITest test = (ITest)testMember.GetValue(output);
+
+            TestName = test.DisplayName;
+
+            this.TestsFixture.LogMessageToTrace($"{TestName} starting");
+
             this.TestsFixture = data;
-            Console.WriteLine("In the ctor");
 
             this.DockerHelper = new DockerHelper();
 
@@ -161,8 +174,12 @@
         /// </summary>
         public void Dispose()
         {
+            this.TestsFixture.LogMessageToTrace($"{TestName} about to teardown");
+
             this.EventStoreConnection.Close();
             this.DockerHelper.StopContainersForScenarioRun();
+
+            this.TestsFixture.LogMessageToTrace($"{TestName} stopped.");
         }
 
         /// <summary>
