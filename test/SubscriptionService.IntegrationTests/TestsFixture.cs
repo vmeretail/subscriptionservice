@@ -15,21 +15,37 @@
     using Shouldly;
 
     /// <summary>
-    /// 
     /// </summary>
     /// <seealso cref="System.IDisposable" />
     public class TestsFixture : IDisposable
     {
-        #region Methods
+        #region Constructors
 
-        public Logger Logger { get;  }
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TestsFixture" /> class.
+        /// </summary>
         public TestsFixture()
         {
             this.Logger = LogManager.GetLogger("SubscriptionService");
 
-            Logger.Info("Test startup");
+            this.Logger.Info("Test startup");
         }
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets the logger.
+        /// </summary>
+        /// <value>
+        /// The logger.
+        /// </value>
+        public Logger Logger { get; }
+
+        #endregion
+
+        #region Methods
 
         /// <summary>
         /// Checks the events.
@@ -45,18 +61,18 @@
 
             await Retry.For(async () =>
                             {
-                                // String eventsAsString = await this.GetEvents(endpointUrl, readmodelHttpClient);
+                                HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl, CancellationToken.None);
 
-                                String eventsAsString = null;
+                                String responseContent = await responseMessage.Content.ReadAsStringAsync();
 
-                                if (String.IsNullOrEmpty(eventsAsString))
+                                if (String.IsNullOrEmpty(responseContent))
                                 {
                                     throw new Exception();
                                 }
 
-                                this.LogMessageToTrace($"Response from endpoint is [{eventsAsString}]");
+                                this.LogMessageToTrace($"Response from endpoint is [{responseContent}]");
 
-                                JArray jsonArray = JArray.Parse(eventsAsString);
+                                JArray jsonArray = JArray.Parse(responseContent);
 
                                 List<String> retrievedEvents = jsonArray.Select(x => x["EventId"].Value<String>()).ToList();
 
@@ -73,37 +89,13 @@
                             });
         }
 
-        public  async Task<String> GetEvent(String endpointUrl,
-                                            HttpClient readmodelHttpClient, Int32 id)
-        {
-            String eventAsString = null;
-
-            await Retry.For(async () =>
-                            {
-                                HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl + $"/{id}", CancellationToken.None);
-
-                                responseMessage.EnsureSuccessStatusCode();
-
-                                String responseContent = await responseMessage.Content.ReadAsStringAsync();
-
-                                if (String.IsNullOrEmpty(responseContent) )
-                                {
-                                    throw new Exception();
-                                }
-
-                                eventAsString = responseContent;
-                            });
-
-            return eventAsString;
-        }
-
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
         {
             //Global teardown
-            Logger.Info("Test teardown");
+            this.Logger.Info("Test teardown");
         }
 
         /// <summary>
@@ -151,6 +143,38 @@
         }
 
         /// <summary>
+        /// Gets the event.
+        /// </summary>
+        /// <param name="endpointUrl">The endpoint URL.</param>
+        /// <param name="readmodelHttpClient">The readmodel HTTP client.</param>
+        /// <param name="id">The identifier.</param>
+        /// <returns></returns>
+        public async Task<String> GetEvent(String endpointUrl,
+                                           HttpClient readmodelHttpClient,
+                                           Int32 id)
+        {
+            String eventAsString = null;
+
+            await Retry.For(async () =>
+                            {
+                                HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl + $"/{id}", CancellationToken.None);
+
+                                responseMessage.EnsureSuccessStatusCode();
+
+                                String responseContent = await responseMessage.Content.ReadAsStringAsync();
+
+                                if (String.IsNullOrEmpty(responseContent))
+                                {
+                                    throw new Exception();
+                                }
+
+                                eventAsString = responseContent;
+                            });
+
+            return eventAsString;
+        }
+
+        /// <summary>
         /// Gets the HTTP client.
         /// </summary>
         /// <returns></returns>
@@ -176,9 +200,8 @@
         {
             Console.WriteLine(traceMessage);
 
-            Logger.Info(traceMessage);
+            this.Logger.Info(traceMessage);
         }
-
 
         /// <summary>
         /// Posts the event to event store.
