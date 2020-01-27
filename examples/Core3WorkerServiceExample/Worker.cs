@@ -161,7 +161,7 @@ namespace Core3WorkerServiceExample
         /// This example assumes you have an event store running locally on the default ports with the default username and password
         /// If your eventstore connection information is different then update this connection string variable to point to your event store        
         /// </summary>
-        private const String EventStoreConnectionString = "ConnectTo=tcp://admin:changeit@192.168.2.35:1113;VerboseLogging=true;";
+        private const String EventStoreConnectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
 
         #endregion
     }
