@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Dynamic;
     using System.Linq;
     using System.Net.Http;
     using System.Text;
@@ -11,6 +12,7 @@
     using EventStore.ClientAPI;
     using EventStore.ClientAPI.SystemData;
     using Factories;
+    using Newtonsoft.Json;
 
     /// <summary>
     /// </summary>
@@ -264,9 +266,26 @@
 
                 this.Trace($"Event Id {resolvedEvent.Event.EventId} - EventAppearedFromPersistentSubscription");
 
-                RecordedEvent j = resolvedEvent.Event;
+                RecordedEvent recordedEvent = resolvedEvent.Event;
 
-                String serialisedData = this.EventFactory.ConvertFrom(resolvedEvent.Event);
+                //Convert recorded event to PersistedEvent
+                //If the Event Store client changes the data type being spat out from EventAppeared, we cna make a small change here to cater for it
+                PersistedEvent persistedEvent = PersistedEvent.Create(recordedEvent.Created,
+                                                                      recordedEvent.CreatedEpoch,
+                                                                      recordedEvent.Data,
+                                                                      recordedEvent.EventId,
+                                                                      recordedEvent.EventNumber,
+                                                                      recordedEvent.EventStreamId,
+                                                                      recordedEvent.EventType,
+                                                                      recordedEvent.IsJson,
+                                                                      recordedEvent.Metadata);
+
+
+
+                //Get the serialised data
+                String serialisedData = this.EventFactory.ConvertFrom(persistedEvent);
+
+                this.Trace($"Serialised data is {serialisedData}");
 
                 //Build a standard WebRequest
                 HttpRequestMessage request = new HttpRequestMessage
@@ -278,11 +297,15 @@
 
                 if (this.OnEventAppeared != null)
                 {
+                    this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using custom Event Appeared");
+
                     //Let the caller make some changes to the HttpRequestMessage
                     this.OnEventAppeared(this, request);
                 }
-                
-                this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
+                else
+                {
+                    this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
+                }
 
                 HttpClient httpClient = subscriptionConfiguration.HttpClient;
 
@@ -300,6 +323,7 @@
                 this.Trace($"Event Id {resolvedEvent.Event.EventId} - Event POST successful");
 
                 subscription.Acknowledge(resolvedEvent);
+
             }
             catch(Exception e)
             {
@@ -374,7 +398,7 @@
         {
             if (this.ErrorHasOccured != null)
             {
-                this.ErrorHasOccured(exception.Message);
+                this.ErrorHasOccured(exception.ToString());
 
                 if (exception.InnerException != null)
                 {

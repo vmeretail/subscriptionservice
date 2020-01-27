@@ -1,11 +1,10 @@
 ﻿namespace SubscriptionService.IntegrationTests
 {
     using System;
-    using System.Dynamic;
     using System.Text;
-    using EventStore.ClientAPI;
     using Factories;
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
 
     /// <summary>
     /// 
@@ -13,23 +12,24 @@
     /// <seealso cref="SubscriptionService.Factories.IEventFactory" />
     internal class TestEventFactory : IEventFactory
     {
+        #region Methods
+
         /// <summary>
         /// Converts from.
         /// </summary>
-        /// <param name="recordedEvent">The recorded event.</param>
+        /// <param name="persistedEvent">The persisted event.</param>
         /// <returns></returns>
-        public String ConvertFrom(RecordedEvent recordedEvent)
+        public String ConvertFrom(PersistedEvent persistedEvent)
         {
-            String serialisedData = Encoding.Default.GetString(recordedEvent.Data, 0, recordedEvent.Data.Length);
-            dynamic expandoObject = new ExpandoObject();
+            String json = Encoding.Default.GetString(persistedEvent.Data);
 
-            var temp = JsonConvert.DeserializeAnonymousType(serialisedData, expandoObject);
+            JObject jObject = JObject.Parse(json);
 
-            //Add our new field in
-            temp.EventId = recordedEvent.EventId;
+            jObject.Add("EventId", new JValue(persistedEvent.EventId));
 
-            return JsonConvert.SerializeObject(temp);
-
+            return JsonConvert.SerializeObject(jObject);
         }
+
+        #endregion
     }
 }

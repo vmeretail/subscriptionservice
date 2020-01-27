@@ -4,6 +4,7 @@ namespace SubscriptionService.UnitTests
     using System.Collections.Generic;
     using Configuration;
     using EventStore.ClientAPI;
+    using Factories;
 
     /// <summary>
     /// </summary>
@@ -53,6 +54,8 @@ namespace SubscriptionService.UnitTests
                                                                                  TestData.MaxRetryCount,
                                                                                  TestData.StreamStartPosition)
                                                          };
+
+        
 
         #endregion
     }

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <Description>Lightweight and easy to use library, which allows you to manage you delivering events from persistent subscriptions.</Description>
     <Company>VME Retail Ltd</Company>
     <Authors>VME Retail Ltd</Authors>
@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="EventStore.Client" Version="5.0.5" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
   </ItemGroup>
 
   <ItemGroup>

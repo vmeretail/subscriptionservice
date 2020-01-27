@@ -45,18 +45,18 @@
 
             await Retry.For(async () =>
                             {
-                                HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl, CancellationToken.None);
+                                // String eventsAsString = await this.GetEvents(endpointUrl, readmodelHttpClient);
 
-                                String responseContent = await responseMessage.Content.ReadAsStringAsync();
+                                String eventsAsString = null;
 
-                                if (String.IsNullOrEmpty(responseContent))
+                                if (String.IsNullOrEmpty(eventsAsString))
                                 {
                                     throw new Exception();
                                 }
 
-                                this.LogMessageToTrace($"Response from endpoint is [{responseContent}]");
+                                this.LogMessageToTrace($"Response from endpoint is [{eventsAsString}]");
 
-                                JArray jsonArray = JArray.Parse(responseContent);
+                                JArray jsonArray = JArray.Parse(eventsAsString);
 
                                 List<String> retrievedEvents = jsonArray.Select(x => x["EventId"].Value<String>()).ToList();
 
@@ -71,6 +71,30 @@
 
                                 matched.ShouldBeTrue();
                             });
+        }
+
+        public  async Task<String> GetEvent(String endpointUrl,
+                                            HttpClient readmodelHttpClient, Int32 id)
+        {
+            String eventAsString = null;
+
+            await Retry.For(async () =>
+                            {
+                                HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl + $"/{id}", CancellationToken.None);
+
+                                responseMessage.EnsureSuccessStatusCode();
+
+                                String responseContent = await responseMessage.Content.ReadAsStringAsync();
+
+                                if (String.IsNullOrEmpty(responseContent) )
+                                {
+                                    throw new Exception();
+                                }
+
+                                eventAsString = responseContent;
+                            });
+
+            return eventAsString;
         }
 
         /// <summary>

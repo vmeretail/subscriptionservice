@@ -1,34 +1,38 @@
 ﻿namespace SubscriptionService.Factories
 {
     using System;
+    using System.Dynamic;
     using System.Text;
-    using EventStore.ClientAPI;
+    using Newtonsoft.Json;
 
     /// <summary>
     /// 
     /// </summary>
-    /// <seealso cref="SubscriptionService.IEventFactory" />
+    /// <seealso cref="IEventFactory" />
     internal class EventFactory : IEventFactory
     {
+        #region Constructors
+
         /// <summary>
-        /// Prevents a default instance of the <see cref="EventFactory"/> class from being created.
+        /// Prevents a default instance of the <see cref="EventFactory" /> class from being created.
         /// </summary>
         private EventFactory()
         {
-            
         }
+
+        #endregion
 
         #region Methods
 
         /// <summary>
         /// Converts from.
         /// </summary>
-        /// <param name="recordedEvent">The recorded event.</param>
+        /// <param name="persistedEvent">The persisted event.</param>
         /// <returns></returns>
-        public String ConvertFrom(RecordedEvent recordedEvent)
+        public String ConvertFrom(PersistedEvent persistedEvent)
         {
             //Build a standard WebRequest
-            String serialisedData = Encoding.Default.GetString(recordedEvent.Data, 0, recordedEvent.Data.Length);
+            String serialisedData = Encoding.Default.GetString(persistedEvent.Data, 0, persistedEvent.Data.Length);
 
             return serialisedData;
         }

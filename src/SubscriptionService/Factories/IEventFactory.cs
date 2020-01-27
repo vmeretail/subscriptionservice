@@ -1,9 +1,9 @@
 ﻿namespace SubscriptionService.Factories
 {
     using System;
-    using EventStore.ClientAPI;
 
     /// <summary>
+    /// 
     /// </summary>
     public interface IEventFactory
     {
@@ -12,9 +12,9 @@
         /// <summary>
         /// Converts from.
         /// </summary>
-        /// <param name="recordedEvent">The recorded event.</param>
+        /// <param name="persistedEvent">The persisted event.</param>
         /// <returns></returns>
-        String ConvertFrom(RecordedEvent recordedEvent);
+        String ConvertFrom(PersistedEvent persistedEvent);
 
         #endregion
     }
