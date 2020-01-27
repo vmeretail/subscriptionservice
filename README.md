@@ -66,3 +66,29 @@ private static void SubscriptionService_OnEventAppeared(object sender, System.Ne
     e.Headers.Add("Authorization", $"Bearer someToken");
 }
 ```
+
+If you need to alter the events before you post, you can create your own EventFactory and inject it when creating the Subscription Service:
+
+```
+this.SubscriptionService = new SubscriptionService(new WorkerEventFactory(),this.Connection);
+```
+
+```
+internal class WorkerEventFactory : IEventFactory
+{
+    public String ConvertFrom(PersistedEvent persistedEvent)
+    {
+        String json = Encoding.Default.GetString(persistedEvent.Data);
+        dynamic expandoObject = new ExpandoObject();
+        dynamic temp = JsonConvert.DeserializeAnonymousType(json, expandoObject);
+
+        temp.EventId = persistedEvent.EventId;
+        temp.EventType = persistedEvent.EventType;
+        temp.EventDateTime = persistedEvent.Created;
+        temp.Metadata = Encoding.Default.GetString(persistedEvent.Metadata);
+
+        return JsonConvert.SerializeObject(temp);
+    }
+}
+```
+
