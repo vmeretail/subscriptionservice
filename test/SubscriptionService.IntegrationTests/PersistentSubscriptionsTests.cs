@@ -71,37 +71,6 @@
             ITest test = (ITest)testMember.GetValue(output);
             this.TestName = test.DisplayName;
 
-            //String debugStr=null;
-
-            //if (output == null)
-            //{
-            //    debugStr = "ITestOutputHelper is null ";
-            //}
-            //else
-            //{
-            //    Type type = output.GetType();
-            //    FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
-
-            //    if (testMember == null)
-            //    {
-            //        debugStr += "testMember is null ";
-            //    }
-            //    else
-            //    {
-            //        ITest test = (ITest)testMember.GetValue(output);
-
-            //        if (test == null)
-            //        {
-            //            debugStr += "test is null ";
-            //        }
-            //        else
-            //        {
-            //            TestName = test.DisplayName;
-            //        }
-
-            //    }
-            //}
-
             this.TestsFixture.LogMessageToTrace($"{this.TestName} starting");
 
             this.DockerHelper = new DockerHelper();
