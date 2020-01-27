@@ -203,18 +203,23 @@
                                                 String endpointUrl,
                                                 HttpClient httpClient)
         {
-            Console.WriteLine($"PostEventToEventStore - uri is [{endpointUrl}]");
+            await Retry.For(async () =>
+                            {
+                                this.LogMessageToTrace($"PostEventToEventStore - uri is [{endpointUrl}]");
 
-            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, endpointUrl);
-            requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
-            requestMessage.Headers.Add("ES-EventId", eventId.ToString());
-            requestMessage.Content = new StringContent(JsonConvert.SerializeObject(eventData), Encoding.UTF8, "application/json");
+                                HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, endpointUrl);
+                                requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
+                                requestMessage.Headers.Add("ES-EventId", eventId.ToString());
+                                requestMessage.Content = new StringContent(JsonConvert.SerializeObject(eventData), Encoding.UTF8, "application/json");
 
-            HttpResponseMessage responseMessage = await httpClient.SendAsync(requestMessage);
+                                HttpResponseMessage responseMessage = await httpClient.SendAsync(requestMessage);
 
-            Console.WriteLine(responseMessage.StatusCode);
+                                this.LogMessageToTrace($"{responseMessage.StatusCode}");
 
-            responseMessage.EnsureSuccessStatusCode();
+                                responseMessage.EnsureSuccessStatusCode();
+                            },
+                            TimeSpan.FromSeconds(30),
+                            TimeSpan.FromSeconds(10));
         }
 
         #endregion
