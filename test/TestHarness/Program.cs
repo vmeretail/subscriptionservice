@@ -2,19 +2,14 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
-    using Newtonsoft.Json.Schema;
     using SubscriptionService;
     using SubscriptionService.Configuration;
 
     /// <summary>
-    /// 
     /// </summary>
     internal class Program
     {
@@ -26,14 +21,14 @@
         /// <param name="args">The arguments.</param>
         private static async Task Main(String[] args)
         {
-            String connectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
+            String connectionString = "ConnectTo=tcp://admin:changeit@127.0.01:1113;VerboseLogging=true;";
 
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
 
             List<Subscription> subscriptions = new List<Subscription>();
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", "https://enq1mfn06hk8q.x.pipedream.net/", numberOfConcurrentMessages: 2, maxRetryCount:1));
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", "https://enr3vi91wr5c.x.pipedream.net/", numberOfConcurrentMessages: 2, maxRetryCount: 1));
+            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", "https://enyaw1mc4if0j.x.pipedream.net/", 2, 1));
+            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", "https://enr3vi91wr5c.x.pipedream.net/", 2, 1));
 
             ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
 

@@ -15,21 +15,23 @@
     using Shouldly;
 
     /// <summary>
-    /// 
     /// </summary>
     /// <seealso cref="System.IDisposable" />
     public class TestsFixture : IDisposable
     {
-        #region Methods
+        #region Constructors
 
-        public Logger Logger { get;  }
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TestsFixture" /> class.
+        /// </summary>
         public TestsFixture()
         {
-            this.Logger = LogManager.GetLogger("SubscriptionService");
-
-            Logger.Info("Test startup");
+            this.LogMessageToTrace("Test startup");
         }
+
+        #endregion
+
+        #region Methods
 
         /// <summary>
         /// Checks the events.
@@ -79,7 +81,7 @@
         public void Dispose()
         {
             //Global teardown
-            Logger.Info("Test teardown");
+            this.LogMessageToTrace("Test teardown");
         }
 
         /// <summary>
@@ -127,6 +129,38 @@
         }
 
         /// <summary>
+        /// Gets the event.
+        /// </summary>
+        /// <param name="endpointUrl">The endpoint URL.</param>
+        /// <param name="readmodelHttpClient">The readmodel HTTP client.</param>
+        /// <param name="id">The identifier.</param>
+        /// <returns></returns>
+        public async Task<String> GetEvent(String endpointUrl,
+                                           HttpClient readmodelHttpClient,
+                                           Int32 id)
+        {
+            String eventAsString = null;
+
+            await Retry.For(async () =>
+                            {
+                                HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl + $"/{id}", CancellationToken.None);
+
+                                responseMessage.EnsureSuccessStatusCode();
+
+                                String responseContent = await responseMessage.Content.ReadAsStringAsync();
+
+                                if (String.IsNullOrEmpty(responseContent))
+                                {
+                                    throw new Exception();
+                                }
+
+                                eventAsString = responseContent;
+                            });
+
+            return eventAsString;
+        }
+
+        /// <summary>
         /// Gets the HTTP client.
         /// </summary>
         /// <returns></returns>
@@ -150,11 +184,12 @@
         /// <param name="traceMessage">The trace message.</param>
         public void LogMessageToTrace(String traceMessage)
         {
+            Logger logger = LogManager.GetLogger("SubscriptionService");
+
             Console.WriteLine(traceMessage);
 
-            Logger.Info(traceMessage);
+            logger.Info(traceMessage);
         }
-
 
         /// <summary>
         /// Posts the event to event store.
@@ -168,18 +203,23 @@
                                                 String endpointUrl,
                                                 HttpClient httpClient)
         {
-            Console.WriteLine($"PostEventToEventStore - uri is [{endpointUrl}]");
+            await Retry.For(async () =>
+                            {
+                                this.LogMessageToTrace($"PostEventToEventStore - uri is [{endpointUrl}]");
 
-            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, endpointUrl);
-            requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
-            requestMessage.Headers.Add("ES-EventId", eventId.ToString());
-            requestMessage.Content = new StringContent(JsonConvert.SerializeObject(eventData), Encoding.UTF8, "application/json");
+                                HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, endpointUrl);
+                                requestMessage.Headers.Add("ES-EventType", eventData.GetType().Name);
+                                requestMessage.Headers.Add("ES-EventId", eventId.ToString());
+                                requestMessage.Content = new StringContent(JsonConvert.SerializeObject(eventData), Encoding.UTF8, "application/json");
 
-            HttpResponseMessage responseMessage = await httpClient.SendAsync(requestMessage);
+                                HttpResponseMessage responseMessage = await httpClient.SendAsync(requestMessage);
 
-            Console.WriteLine(responseMessage.StatusCode);
+                                this.LogMessageToTrace($"{responseMessage.StatusCode}");
 
-            responseMessage.EnsureSuccessStatusCode();
+                                responseMessage.EnsureSuccessStatusCode();
+                            },
+                            TimeSpan.FromSeconds(30),
+                            TimeSpan.FromSeconds(10));
         }
 
         #endregion

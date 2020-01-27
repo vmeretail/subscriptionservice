@@ -61,7 +61,7 @@ namespace Core3WorkerServiceExample
             await this.Connection.ConnectAsync();
 
             // New up the Subscription Service instance
-            this.SubscriptionService = new SubscriptionService(this.Connection);
+            this.SubscriptionService = new SubscriptionService(new WorkerEventFactory(),this.Connection);
 
             // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 
             // adding a Authorization token onto the HTTP POST (as demonstrated below)
@@ -103,7 +103,7 @@ namespace Core3WorkerServiceExample
             // The subscription service requires an HTTP endpoint to post event data to, for this example we are using RequestBin (https://requestbin.com/)
             // To run the example either replace the Url below with one of your own endpoints or create a new one on RequestBin or a similar service and
             // update the Url below
-            String endpointUrl = "https://enyx4bscr5t6k.x.pipedream.net/";
+            String endpointUrl = "https://enyaw1mc4if0j.x.pipedream.net/";
 
             // Setup a list of persistent subscription objects, each one of these will represent a Persistent Subscription in the Event Store - Competing Consumers tab
             // Each subscription allows the setting of the following values:

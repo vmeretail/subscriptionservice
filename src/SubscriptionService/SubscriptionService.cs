@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Dynamic;
     using System.Linq;
     using System.Net.Http;
     using System.Text;
@@ -11,6 +12,7 @@
     using EventStore.ClientAPI;
     using EventStore.ClientAPI.SystemData;
     using Factories;
+    using Newtonsoft.Json;
 
     /// <summary>
     /// </summary>
@@ -18,6 +20,8 @@
     /// <seealso cref="ISubscriptionService" />
     public class SubscriptionService : ISubscriptionService
     {
+        private readonly IEventFactory EventFactory;
+
         #region Fields
 
         /// <summary>
@@ -38,13 +42,29 @@
         /// <exception cref="ArgumentNullException">Value cannot be null - eventStoreConnection</exception>
         public SubscriptionService(IEventStoreConnection eventStoreConnection,
                                    String username = "admin",
+                                   String password = "changeit") : this(Factories.EventFactory.Create(), eventStoreConnection,username,password)
+        {
+            
+        }
+        public SubscriptionService(IEventFactory eventFactory,
+                                   IEventStoreConnection eventStoreConnection,
+                                   String username = "admin",
                                    String password = "changeit")
         {
+
             if (eventStoreConnection == null)
             {
                 throw new ArgumentNullException("Value cannot be null", nameof(eventStoreConnection));
             }
-            
+
+            if (eventFactory == null)
+            {
+                //Create a default factory
+                eventFactory = Factories.EventFactory.Create();
+            }
+
+            this.EventFactory = eventFactory;
+
             this.EventStoreConnection = eventStoreConnection;
 
             // Cache the user credentials
@@ -246,9 +266,28 @@
 
                 this.Trace($"Event Id {resolvedEvent.Event.EventId} - EventAppearedFromPersistentSubscription");
 
-                //Build a standard WebRequest
-                String serialisedData = Encoding.Default.GetString(resolvedEvent.Event.Data, 0, resolvedEvent.Event.Data.Length);
+                RecordedEvent recordedEvent = resolvedEvent.Event;
 
+                //Convert recorded event to PersistedEvent
+                //If the Event Store client changes the data type being spat out from EventAppeared, we cna make a small change here to cater for it
+                PersistedEvent persistedEvent = PersistedEvent.Create(recordedEvent.Created,
+                                                                      recordedEvent.CreatedEpoch,
+                                                                      recordedEvent.Data,
+                                                                      recordedEvent.EventId,
+                                                                      recordedEvent.EventNumber,
+                                                                      recordedEvent.EventStreamId,
+                                                                      recordedEvent.EventType,
+                                                                      recordedEvent.IsJson,
+                                                                      recordedEvent.Metadata);
+
+
+
+                //Get the serialised data
+                String serialisedData = this.EventFactory.ConvertFrom(persistedEvent);
+
+                this.Trace($"Serialised data is {serialisedData}");
+
+                //Build a standard WebRequest
                 HttpRequestMessage request = new HttpRequestMessage
                                              {
                                                  Method = HttpMethod.Post,
@@ -258,11 +297,15 @@
 
                 if (this.OnEventAppeared != null)
                 {
+                    this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using custom Event Appeared");
+
                     //Let the caller make some changes to the HttpRequestMessage
                     this.OnEventAppeared(this, request);
                 }
-                
-                this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
+                else
+                {
+                    this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
+                }
 
                 HttpClient httpClient = subscriptionConfiguration.HttpClient;
 
@@ -280,6 +323,7 @@
                 this.Trace($"Event Id {resolvedEvent.Event.EventId} - Event POST successful");
 
                 subscription.Acknowledge(resolvedEvent);
+
             }
             catch(Exception e)
             {
