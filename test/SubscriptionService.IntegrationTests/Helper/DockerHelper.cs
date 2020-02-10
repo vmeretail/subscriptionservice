@@ -12,6 +12,7 @@
     using Ductus.FluentDocker.Model.Builders;
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
+    using Microsoft.AspNetCore.Hosting;
     using NLog;
     using Shouldly;
 
@@ -82,8 +83,22 @@
             this.TestId = Guid.NewGuid();
 
             this.TestNetwork = new Builder().UseNetwork($"test-network-{Guid.NewGuid():N}").Build();
+            String mountDir = String.Empty; //Don't use mounted directories on CI
 
-            String mountDir = FdOs.IsWindows() ? $"C:\\home\\forge\\subscriptionservice\\trace\\{DateTime.Now:yyyyMMdd}\\{testname}" : $"//home//forge//subscriptionservice//trace//{DateTime.Now:yyyyMMdd}//{testname}//";
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            Boolean isDevelopment = true;
+
+            if (environment != null)
+            {
+                 isDevelopment = environment == EnvironmentName.Development;
+            }
+
+            if (isDevelopment)
+            {
+                 mountDir = FdOs.IsWindows()
+                    ? $"C:\\home\\forge\\subscriptionservice\\trace\\{DateTime.Now:yyyyMMdd}\\{testname}"
+                    : $"//home//forge//subscriptionservice//trace//{DateTime.Now:yyyyMMdd}//{testname}//";
+            }
 
             //Create the destination directory rather than relying on Docker library.
             Directory.CreateDirectory(mountDir);
