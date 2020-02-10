@@ -145,7 +145,7 @@
         /// Checks the subscription has been created.
         /// </summary>
         /// <param name="subscription">The subscription.</param>
-        public async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
+        private async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
         {
             String uri = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{subscription.StreamName}/{subscription.GroupName}/info";
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
