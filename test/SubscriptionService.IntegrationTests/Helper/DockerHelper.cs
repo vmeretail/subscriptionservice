@@ -98,10 +98,10 @@
                  mountDir = FdOs.IsWindows()
                     ? $"C:\\home\\forge\\subscriptionservice\\trace\\{DateTime.Now:yyyyMMdd}\\{testname}"
                     : $"//home//forge//subscriptionservice//trace//{DateTime.Now:yyyyMMdd}//{testname}//";
-            }
 
-            //Create the destination directory rather than relying on Docker library.
-            Directory.CreateDirectory(mountDir);
+                 //Create the destination directory rather than relying on Docker library.
+                 Directory.CreateDirectory(mountDir);
+            }
 
             this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, mountDir);
             this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, ""); //No trace written
