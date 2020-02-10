@@ -2,14 +2,18 @@
 {
     using System;
     using System.Diagnostics;
+    using System.IO;
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Threading;
     using Ductus.FluentDocker.Builders;
+    using Ductus.FluentDocker.Common;
     using Ductus.FluentDocker.Model.Builders;
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
+    using Microsoft.AspNetCore.Hosting;
+    using NLog;
     using Shouldly;
 
     /// <summary>
@@ -74,14 +78,33 @@
         /// <summary>
         /// Starts the containers for scenario run.
         /// </summary>
-        public void StartContainersForScenarioRun()
+        public void StartContainersForScenarioRun(String testname)
         {
             this.TestId = Guid.NewGuid();
 
             this.TestNetwork = new Builder().UseNetwork($"test-network-{Guid.NewGuid():N}").Build();
+            String mountDir = String.Empty; //Don't use mounted directories on CI
 
-            this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, "");
-            this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, "");
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            Boolean isDevelopment = true;
+
+            if (environment != null)
+            {
+                 isDevelopment = environment == EnvironmentName.Development;
+            }
+
+            if (isDevelopment)
+            {
+                 mountDir = FdOs.IsWindows()
+                    ? $"C:\\home\\forge\\subscriptionservice\\trace\\{DateTime.Now:yyyyMMdd}\\{testname}"
+                    : $"//home//forge//subscriptionservice//trace//{DateTime.Now:yyyyMMdd}//{testname}//";
+
+                 //Create the destination directory rather than relying on Docker library.
+                 Directory.CreateDirectory(mountDir);
+            }
+
+            this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, mountDir);
+            this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, ""); //No trace written
 
             this.EventStoreContainer.Start();
             this.DummyRESTContainer.Start();
@@ -162,7 +185,8 @@
             IContainerService container = new Builder().UseContainer().UseImage("eventstore/eventstore:release-5.0.5",true).ExposePort(2113).ExposePort(1113)
                                                        .WithName(containerName)
                                                        .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
-                                                       .Mount(mountDirectory, "/var/log/eventstore/", MountType.ReadWrite).UseNetwork(networkService)
+                                                       .Mount(mountDirectory, $"/var/log/eventstore/{DateTime.Now.ToString("yyyy-MM-dd")}/", MountType.ReadWrite)
+                                                       .UseNetwork(networkService)
                                                        .WaitForPort("2113/tcp", 30000 /*30s*/).Build();
 
             return container;

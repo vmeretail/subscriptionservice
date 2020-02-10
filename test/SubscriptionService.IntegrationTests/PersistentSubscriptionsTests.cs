@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Reflection;
@@ -69,14 +70,14 @@
             Type type = output.GetType();
             FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
             ITest test = (ITest)testMember.GetValue(output);
-            this.TestName = test.DisplayName;
+            this.TestName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
 
             this.TestsFixture.LogMessageToTrace($"{this.TestName} starting");
 
             this.DockerHelper = new DockerHelper();
 
             // Start the Event Store & Dummy API
-            this.DockerHelper.StartContainersForScenarioRun();
+            this.DockerHelper.StartContainersForScenarioRun(this.TestName);
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
             this.EventStoreHttpClient = this.TestsFixture.GetHttpClient();
@@ -144,7 +145,7 @@
         /// Checks the subscription has been created.
         /// </summary>
         /// <param name="subscription">The subscription.</param>
-        public async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
+        private async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
         {
             String uri = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{subscription.StreamName}/{subscription.GroupName}/info";
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);

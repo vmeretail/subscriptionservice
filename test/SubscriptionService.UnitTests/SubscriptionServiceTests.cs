@@ -82,7 +82,7 @@ namespace SubscriptionService.UnitTests
             List<Subscription> subscriptionsList = null;
 
             // 2. Act
-            Should.Throw<ArgumentNullException>(async () =>
+            await Should.ThrowAsync<ArgumentNullException>(async () =>
                                                 {
                                                     await subscriptionService.Start(subscriptionsList, CancellationToken.None);
                                                 });
@@ -107,7 +107,7 @@ namespace SubscriptionService.UnitTests
             List<Subscription> subscriptionsList = new List<Subscription>();
 
             // 2. Act
-            Should.Throw<ArgumentNullException>(async () =>
+            await Should.ThrowAsync<ArgumentNullException>(async () =>
                                                 {
                                                     await subscriptionService.Start(subscriptionsList, CancellationToken.None);
                                                 });
