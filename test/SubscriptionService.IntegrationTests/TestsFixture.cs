@@ -26,7 +26,7 @@
         /// </summary>
         public TestsFixture()
         {
-            this.LogMessageToTrace("Test startup");
+           
         }
 
         #endregion
