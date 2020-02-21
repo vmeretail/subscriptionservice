@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        eventstoreversion: [4.1.3, 5.0.6, 6.0.0-preview2.31-buster-slim, 6.0.0-preview2.31-buster-slim, 6.0.0-preview2.31-bionic]
+        eventstoreversion: [4.1.3, 5.0.6, 6.0.0-preview2.31-buster-slim, 6.0.0-preview2.31-bionic]
 
     steps:
     - uses: actions/checkout@v1
