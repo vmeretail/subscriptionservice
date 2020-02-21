@@ -65,16 +65,6 @@
         public PersistentSubscriptionsTests(TestsFixture data,
                                             ITestOutputHelper output)
         {
-            String esversion = Environment.GetEnvironmentVariable("ESVersion");
-            if (string.IsNullOrEmpty(esversion))
-            {
-                Console.WriteLine("esversion not found :(");
-            }
-            else
-            {
-                Console.WriteLine(esversion);
-            }
-        
             this.TestsFixture = data;
 
             Type type = output.GetType();
@@ -84,7 +74,7 @@
 
             this.TestsFixture.LogMessageToTrace($"{this.TestName} starting");
 
-            this.DockerHelper = new DockerHelper();
+            this.DockerHelper = new DockerHelper(data);
 
             // Start the Event Store & Dummy API
             this.DockerHelper.StartContainersForScenarioRun(this.TestName);

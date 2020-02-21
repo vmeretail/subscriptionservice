@@ -1,7 +1,7 @@
 ﻿namespace SubscriptionService.IntegrationTests
 {
     using System;
-    using System.Diagnostics;
+    using System.Collections.Generic;
     using System.IO;
     using System.Net;
     using System.Net.Http;
@@ -13,7 +13,7 @@
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
     using Microsoft.AspNetCore.Hosting;
-    using NLog;
+    using Microsoft.Extensions.Configuration;
     using Shouldly;
 
     /// <summary>
@@ -42,6 +42,24 @@
         /// The test network
         /// </summary>
         private INetworkService TestNetwork;
+
+        /// <summary>
+        /// The tests fixture
+        /// </summary>
+        private readonly TestsFixture TestsFixture;
+
+        #endregion
+
+        #region Constructors
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DockerHelper"/> class.
+        /// </summary>
+        /// <param name="testsFixture">The tests fixture.</param>
+        public DockerHelper(TestsFixture testsFixture)
+        {
+            this.TestsFixture = testsFixture;
+        }
 
         #endregion
 
@@ -78,32 +96,33 @@
         /// <summary>
         /// Starts the containers for scenario run.
         /// </summary>
+        /// <param name="testname">The testname.</param>
         public void StartContainersForScenarioRun(String testname)
         {
             this.TestId = Guid.NewGuid();
 
             this.TestNetwork = new Builder().UseNetwork($"test-network-{Guid.NewGuid():N}").Build();
-            String mountDir = String.Empty; //Don't use mounted directories on CI
+            String mountDir = string.Empty; //Don't use mounted directories on CI
 
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            String? environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             Boolean isDevelopment = true;
 
             if (environment != null)
             {
-                 isDevelopment = environment == EnvironmentName.Development;
+                isDevelopment = environment == EnvironmentName.Development;
             }
 
             if (isDevelopment)
             {
-                 mountDir = FdOs.IsWindows()
+                mountDir = FdOs.IsWindows()
                     ? $"C:\\home\\forge\\subscriptionservice\\trace\\{DateTime.Now:yyyyMMdd}\\{testname}"
                     : $"//home//forge//subscriptionservice//trace//{DateTime.Now:yyyyMMdd}//{testname}//";
 
-                 //Create the destination directory rather than relying on Docker library.
-                 Directory.CreateDirectory(mountDir);
+                //Create the destination directory rather than relying on Docker library.
+                Directory.CreateDirectory(mountDir);
             }
 
-            this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, mountDir);
+            this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, mountDir, this.TestsFixture);
             this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, ""); //No trace written
 
             this.EventStoreContainer.Start();
@@ -112,30 +131,30 @@
             this.EventStoreTcpPort = this.EventStoreContainer.ToHostExposedEndpoint("1113/tcp").Port;
             this.EventStoreHttpPort = this.EventStoreContainer.ToHostExposedEndpoint("2113/tcp").Port;
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
-            
+
             // Verify the Event Store is running
             Retry.For(async () =>
-                            {
-                                String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
+                      {
+                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
 
-                                HttpClient client = new HttpClient();
+                          HttpClient client = new HttpClient();
 
-                                HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
-                                pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                            }).Wait();
+                          HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
+                          pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+                      }).Wait();
 
             Retry.For(async () =>
-                            {
-                                String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/info";
-                                HttpClient client = new HttpClient();
+                      {
+                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/info";
+                          HttpClient client = new HttpClient();
 
-                                HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-                                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
+                          HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                          requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
 
-                                HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
+                          HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
 
-                                infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                            }).Wait();
+                          infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+                      }).Wait();
         }
 
         /// <summary>
@@ -165,8 +184,8 @@
                                                                   INetworkService networkService,
                                                                   String mountDirectory)
         {
-            IContainerService container = new Builder().UseContainer().UseImage(@"vmeretailsystems/vmedummyjson:latest",true).ExposePort(80)
-                                                       .WithName(containerName).UseNetwork(networkService).WaitForPort("80/tcp", 30000 /*30s*/).Build();
+            IContainerService container = new Builder().UseContainer().UseImage(@"vmeretailsystems/vmedummyjson:latest", true).ExposePort(80).WithName(containerName)
+                                                       .UseNetwork(networkService).WaitForPort("80/tcp", 30000 /*30s*/).Build();
 
             return container;
         }
@@ -177,17 +196,45 @@
         /// <param name="containerName">Name of the container.</param>
         /// <param name="networkService">The network service.</param>
         /// <param name="mountDirectory">The mount directory.</param>
+        /// <param name="testsFixture">The tests fixture.</param>
         /// <returns></returns>
         private static IContainerService CreateEventStoreContainer(String containerName,
                                                                    INetworkService networkService,
-                                                                   String mountDirectory)
+                                                                   String mountDirectory,
+                                                                   TestsFixture testsFixture)
         {
-            IContainerService container = new Builder().UseContainer().UseImage("eventstore/eventstore:release-5.0.5",true).ExposePort(2113).ExposePort(1113)
-                                                       .WithName(containerName)
+            // Determine the ES version from the Environment variable
+            String eventstoreVersion = Environment.GetEnvironmentVariable("ESVersion");
+
+            // Support local testing where the environment variable has not been set
+            if (string.IsNullOrEmpty(eventstoreVersion))
+            {
+                eventstoreVersion = "default";
+            }
+
+            // Now do the version lookup
+            // Create an object to read the configuration
+            IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+
+            // Bind the config
+            Dictionary<String, EventStoreDockerConfiguration> configurationList = new Dictionary<String, EventStoreDockerConfiguration>();
+            config.GetSection("EventStoreDocker").Bind(configurationList);
+
+            // Find the relevant configuration
+            EventStoreDockerConfiguration esConfig = null;
+            if (configurationList.ContainsKey(eventstoreVersion))
+            {
+                esConfig = configurationList[eventstoreVersion];
+            }
+
+            String dockerImage = $"{esConfig.Registry}:{esConfig.Tag}";
+
+            testsFixture.LogMessageToTrace($"About to start event store using image {dockerImage}");
+            // Create the container
+            IContainerService container = new Builder().UseContainer().UseImage(dockerImage, true).ExposePort(2113).ExposePort(1113).WithName(containerName)
                                                        .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
                                                        .Mount(mountDirectory, $"/var/log/eventstore/{DateTime.Now.ToString("yyyy-MM-dd")}/", MountType.ReadWrite)
-                                                       .UseNetwork(networkService)
-                                                       .WaitForPort("2113/tcp", 30000 /*30s*/).Build();
+                                                       .UseNetwork(networkService).WaitForPort("2113/tcp", 30000 /*30s*/).Build();
 
             return container;
         }
