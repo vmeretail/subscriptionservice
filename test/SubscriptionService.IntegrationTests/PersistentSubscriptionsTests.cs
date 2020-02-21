@@ -65,6 +65,16 @@
         public PersistentSubscriptionsTests(TestsFixture data,
                                             ITestOutputHelper output)
         {
+            String esversion = Environment.GetEnvironmentVariable("ESVersion");
+            if (string.IsNullOrEmpty(esversion))
+            {
+                Console.WriteLine("esversion not found :(");
+            }
+            else
+            {
+                Console.WriteLine(esversion);
+            }
+        
             this.TestsFixture = data;
 
             Type type = output.GetType();
