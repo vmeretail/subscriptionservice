@@ -74,7 +74,7 @@
 
             this.TestsFixture.LogMessageToTrace($"{this.TestName} starting");
 
-            this.DockerHelper = new DockerHelper();
+            this.DockerHelper = new DockerHelper(data);
 
             // Start the Event Store & Dummy API
             this.DockerHelper.StartContainersForScenarioRun(this.TestName);

@@ -14,8 +14,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        #os: [windows-latest, ubuntu-latest, macos-latest]
         os: [ubuntu-latest]
+        eventstoreversion: [4.0.3, 5.0.6]
 
     steps:
     - uses: actions/checkout@v1
@@ -36,6 +36,8 @@ jobs:
         echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
         dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
         dotnet test "test\SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj"        
+      env:
+        ESVersion: ${{ matrix.eventstoreversion }}        
         
     - name: Setup tmate session
       if: failure()
