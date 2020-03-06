@@ -6,6 +6,8 @@
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
+    using System.Net.Security;
+    using System.Security.Authentication;
     using System.Threading;
     using Ductus.FluentDocker.Builders;
     using Ductus.FluentDocker.Common;
@@ -122,7 +124,9 @@
                 Directory.CreateDirectory(mountDir);
             }
 
-            this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, mountDir, this.TestsFixture);
+            EventStoreDockerConfiguration eventStoreDockerConfiguration = DockerHelper.GetEventStoreDockerConfiguration();
+
+            this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, mountDir, this.TestsFixture, eventStoreDockerConfiguration);
             this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, ""); //No trace written
 
             this.EventStoreContainer.Start();
@@ -132,12 +136,14 @@
             this.EventStoreHttpPort = this.EventStoreContainer.ToHostExposedEndpoint("2113/tcp").Port;
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
 
+            String scheme = eventStoreDockerConfiguration.IsLegacyVersion ? "http" : "https";
+
             // Verify the Event Store is running
             Retry.For(async () =>
                       {
-                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
+                          String url = $"{scheme}://127.0.0.1:{this.EventStoreHttpPort}/ping";
 
-                          HttpClient client = new HttpClient();
+                          HttpClient client = DockerHelper.CreateHttpClient(url);
 
                           HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
                           pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -145,8 +151,9 @@
 
             Retry.For(async () =>
                       {
-                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/info";
-                          HttpClient client = new HttpClient();
+                          String url = $"{scheme}://127.0.0.1:{this.EventStoreHttpPort}/info";
+
+                          HttpClient client = DockerHelper.CreateHttpClient(url);
 
                           HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
                           requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
@@ -155,6 +162,26 @@
 
                           infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
                       }).Wait();
+        }
+
+        public static HttpClient CreateHttpClient(String uri)
+        {
+            HttpClientHandler handler = new HttpClientHandler();
+            
+            if (new Uri(uri).Scheme == "https")
+            {
+                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                handler.SslProtocols = SslProtocols.Tls12;
+
+                handler.ServerCertificateCustomValidationCallback += (sender, certificate, chain, sslPolicyErrors) =>
+                                                                     {
+                                                                         return (sslPolicyErrors & SslPolicyErrors.RemoteCertificateNotAvailable) != SslPolicyErrors.RemoteCertificateNotAvailable;
+                                                                     };
+            }
+
+            HttpClient httpClient = new HttpClient(handler);
+            
+            return httpClient;
         }
 
         /// <summary>
@@ -197,11 +224,35 @@
         /// <param name="networkService">The network service.</param>
         /// <param name="mountDirectory">The mount directory.</param>
         /// <param name="testsFixture">The tests fixture.</param>
+        /// <param name="eventStoreDockerConfiguration">The event store docker configuration.</param>
         /// <returns></returns>
         private static IContainerService CreateEventStoreContainer(String containerName,
                                                                    INetworkService networkService,
                                                                    String mountDirectory,
-                                                                   TestsFixture testsFixture)
+                                                                   TestsFixture testsFixture,
+                                                                   EventStoreDockerConfiguration eventStoreDockerConfiguration)
+        {
+            String dockerImage = $"{eventStoreDockerConfiguration.Registry}:{eventStoreDockerConfiguration.Tag}";
+
+            testsFixture.LogMessageToTrace($"About to start event store using image {dockerImage}");
+            
+            // Create the container
+            ContainerBuilder containerBuilder = new Builder().UseContainer().UseImage(dockerImage, true).ExposePort(2113).ExposePort(1113).WithName(containerName)
+                                                             .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
+                                                             .Mount(mountDirectory, $"/var/log/eventstore/{DateTime.Now.ToString("yyyy-MM-dd")}/", MountType.ReadWrite)
+                                                             .UseNetwork(networkService).WaitForPort("2113/tcp", 30000 /*30s*/);
+
+            if (eventStoreDockerConfiguration.IsLegacyVersion == false)
+            {
+                // Add the development mode switch on ES versions > 6 otherwise 
+                // SSL cerificate needed to run
+                containerBuilder.Command("--dev");
+            }
+
+            return containerBuilder.Build();
+        }
+
+        private static EventStoreDockerConfiguration GetEventStoreDockerConfiguration()
         {
             // Determine the ES version from the Environment variable
             String eventstoreVersion = Environment.GetEnvironmentVariable("ESVersion");
@@ -227,16 +278,7 @@
                 esConfig = configurationList[eventstoreVersion];
             }
 
-            String dockerImage = $"{esConfig.Registry}:{esConfig.Tag}";
-
-            testsFixture.LogMessageToTrace($"About to start event store using image {dockerImage}");
-            // Create the container
-            IContainerService container = new Builder().UseContainer().UseImage(dockerImage, true).ExposePort(2113).ExposePort(1113).WithName(containerName)
-                                                       .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
-                                                       .Mount(mountDirectory, $"/var/log/eventstore/{DateTime.Now.ToString("yyyy-MM-dd")}/", MountType.ReadWrite)
-                                                       .UseNetwork(networkService).WaitForPort("2113/tcp", 30000 /*30s*/).Build();
-
-            return container;
+            return esConfig;
         }
 
         #endregion
