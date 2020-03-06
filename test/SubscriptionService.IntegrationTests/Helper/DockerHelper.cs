@@ -186,8 +186,10 @@
                               List<String> events = new List<String>();
                               var testEventData = new
                                                   {
-                                                      AggregateId = Guid.NewGuid()
-                                                  };
+                                                      AggregateId = Guid.NewGuid(),
+                                                      eventId = Guid.NewGuid(),
+                                                      type = "testEvent"
+                              };
                               events.Add(JsonConvert.SerializeObject(testEventData));
 
                               await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
