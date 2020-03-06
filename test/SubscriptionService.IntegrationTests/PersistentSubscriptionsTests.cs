@@ -188,7 +188,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "CIDebug")]
         public async Task PersistentSubscriptions_EventDelivery_DifferentEventsMultipleEndpoints_EventsAreDelivered()
         {
             // 1. Arrange
@@ -261,7 +261,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact()]
         public async Task PersistentSubscriptions_EventDelivery_EventIsDelivered()
         {
             JsonConvert.DefaultSettings = () => new JsonSerializerSettings()
@@ -318,7 +318,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "CIDebug")]
         public async Task PersistentSubscriptions_EventDelivery_MultipleEndpoints_EventsAreDelivered()
         {
             // 1. Arrange
@@ -376,7 +376,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "CIDebug")]
         public async Task PersistentSubscriptions_EventDelivery_StartServiceThenPostEvents_EventIsDelivered()
         {
             // 1. Arrange
@@ -426,7 +426,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "CIDebug")]
         public async Task PersistentSubscriptions_EventDelivery_UpdateSubscriptionConfigurationWhileRunning_EventsAreDelivered()
         {
             // 1. Arrange
@@ -503,7 +503,7 @@
         /// <summary>
         /// Subscriptions the service custom event factory used translated events emitted.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "CIDebug")]
         public async Task SubscriptionService_CustomEventFactoryUsed_TranslatedEventsEmitted()
         {
             // 1. Arrange
@@ -550,7 +550,7 @@
         /// <summary>
         /// Subscriptions the service multiple events posted all events delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "CIDebug")]
         public async Task SubscriptionService_MultipleEventsPosted_AllEventsDelivered()
         {
             // 1. Arrange
@@ -605,7 +605,7 @@
         /// <summary>
         /// Subscriptions the service optional parameters default persistent subscription created.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "CIDebug")]
         public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
         {
             // 1. Arrange
@@ -633,7 +633,7 @@
         /// <summary>
         /// Subscriptions the service optional parameters set persistent subscription created.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "CIDebug")]
         public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
         {
             // 1. Arrange

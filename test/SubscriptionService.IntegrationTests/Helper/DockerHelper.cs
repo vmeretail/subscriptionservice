@@ -172,23 +172,26 @@
             }
             else
             {
-                // For event store 6
-                // THis is temp code just now as cant get the HTTP interface working over docker :|
-                // Build the Event Store Connection String 
-                String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+                Retry.For(async () =>
+                          {
+                              // For event store 6
+                              // THis is temp code just now as cant get the HTTP interface working over docker :|
+                              // Build the Event Store Connection String 
+                              String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
 
-                // Setup the Event Store Connection
-                IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+                              // Setup the Event Store Connection
+                              IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
 
-                eventStoreConnection.ConnectAsync().Wait();
-                List<String> events = new List<String>();
-                var testEventData = new
-                                    {
-                                        AggregateId = Guid.NewGuid()
-                                    };
-                events.Add(JsonConvert.SerializeObject(testEventData));
-                
-                this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray()).Wait();
+                              await eventStoreConnection.ConnectAsync();
+                              List<String> events = new List<String>();
+                              var testEventData = new
+                                                  {
+                                                      AggregateId = Guid.NewGuid()
+                                                  };
+                              events.Add(JsonConvert.SerializeObject(testEventData));
+
+                              await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
+                          }).Wait();
             }
         }
         
