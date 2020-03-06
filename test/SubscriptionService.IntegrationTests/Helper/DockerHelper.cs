@@ -181,16 +181,14 @@
                 IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
 
                 eventStoreConnection.ConnectAsync().Wait();
-                List<EventData> events = new List<EventData>();
-
+                List<String> events = new List<String>();
                 var testEventData = new
                                     {
                                         AggregateId = Guid.NewGuid()
                                     };
-                Byte[] bytes = ASCIIEncoding.Default.GetBytes(JsonConvert.SerializeObject(testEventData));
-
-                events.Add(new EventData(Guid.NewGuid(), "TestEvent1", true, bytes, null));
-                eventStoreConnection.AppendToStreamAsync("TestStream", 0, events, new UserCredentials("admin", "changeit"));
+                events.Add(JsonConvert.SerializeObject(testEventData));
+                
+                this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray()).Wait();
             }
         }
         
