@@ -8,14 +8,19 @@
     using System.Net.Http.Headers;
     using System.Net.Security;
     using System.Security.Authentication;
+    using System.Text;
     using System.Threading;
     using Ductus.FluentDocker.Builders;
     using Ductus.FluentDocker.Common;
     using Ductus.FluentDocker.Model.Builders;
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
+    using EventStore.ClientAPI;
+    using EventStore.ClientAPI.Projections;
+    using EventStore.ClientAPI.SystemData;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
+    using Newtonsoft.Json;
     using Shouldly;
 
     /// <summary>
@@ -136,34 +141,64 @@
             this.EventStoreHttpPort = this.EventStoreContainer.ToHostExposedEndpoint("2113/tcp").Port;
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
 
-            String scheme = eventStoreDockerConfiguration.IsLegacyVersion ? "http" : "https";
+            if (eventStoreDockerConfiguration.IsLegacyVersion)
+            {
+                String scheme = "http";
 
-            // Verify the Event Store is running
-            Retry.For(async () =>
-                      {
-                          String url = $"{scheme}://127.0.0.1:{this.EventStoreHttpPort}/ping";
+                // Verify the Event Store is running
+                Retry.For(async () =>
+                          {
+                              String url = $"{scheme}://127.0.0.1:{this.EventStoreHttpPort}/ping";
 
-                          HttpClient client = DockerHelper.CreateHttpClient(url);
+                              HttpClient client = DockerHelper.CreateHttpClient(url);
 
-                          HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
-                          pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                      }).Wait();
+                              HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
+                              pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+                          }).Wait();
 
-            Retry.For(async () =>
-                      {
-                          String url = $"{scheme}://127.0.0.1:{this.EventStoreHttpPort}/info";
+                Retry.For(async () =>
+                          {
+                              String url = $"{scheme}://127.0.0.1:{this.EventStoreHttpPort}/info";
 
-                          HttpClient client = DockerHelper.CreateHttpClient(url);
+                              HttpClient client = DockerHelper.CreateHttpClient(url);
 
-                          HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-                          requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
+                              HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                              requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
 
-                          HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
+                              HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
 
-                          infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                      }).Wait();
+                              infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+                          }).Wait();
+            }
+            else
+            {
+                // For event store 6
+                // THis is temp code just now as cant get the HTTP interface working over docker :|
+                // Build the Event Store Connection String 
+                String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+
+                // Setup the Event Store Connection
+                IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+
+                eventStoreConnection.ConnectAsync().Wait();
+                List<EventData> events = new List<EventData>();
+
+                var testEventData = new
+                                    {
+                                        AggregateId = Guid.NewGuid()
+                                    };
+                Byte[] bytes = ASCIIEncoding.Default.GetBytes(JsonConvert.SerializeObject(testEventData));
+
+                events.Add(new EventData(Guid.NewGuid(), "TestEvent1", true, bytes, null));
+                eventStoreConnection.AppendToStreamAsync("TestStream", 0, events, new UserCredentials("admin", "changeit"));
+            }
         }
-
+        
+        /// <summary>
+        /// Creates the HTTP client.
+        /// </summary>
+        /// <param name="uri">The URI.</param>
+        /// <returns></returns>
         public static HttpClient CreateHttpClient(String uri)
         {
             HttpClientHandler handler = new HttpClientHandler();
@@ -236,22 +271,32 @@
 
             testsFixture.LogMessageToTrace($"About to start event store using image {dockerImage}");
             
-            // Create the container
-            ContainerBuilder containerBuilder = new Builder().UseContainer().UseImage(dockerImage, true).ExposePort(2113).ExposePort(1113).WithName(containerName)
-                                                             .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
-                                                             .Mount(mountDirectory, $"/var/log/eventstore/{DateTime.Now.ToString("yyyy-MM-dd")}/", MountType.ReadWrite)
-                                                             .UseNetwork(networkService).WaitForPort("2113/tcp", 30000 /*30s*/);
+            List<String> environmentVariables = new List<String>();
+            environmentVariables.Add("EVENTSTORE_RUN_PROJECTIONS=all");
+            environmentVariables.Add("EVENTSTORE_START_STANDARD_PROJECTIONS=true");
 
             if (eventStoreDockerConfiguration.IsLegacyVersion == false)
             {
                 // Add the development mode switch on ES versions > 6 otherwise 
                 // SSL cerificate needed to run
-                containerBuilder.Command("--dev");
+                environmentVariables.Add("EVENTSTORE_DEV=true");
             }
+
+            // Create the container
+            ContainerBuilder containerBuilder = new Builder().UseContainer().UseImage(dockerImage, true).ExposePort(2113).ExposePort(1113).WithName(containerName)
+                                                             .WithEnvironment(environmentVariables.ToArray())
+                                                             .Mount(mountDirectory, $"/var/log/eventstore/{DateTime.Now.ToString("yyyy-MM-dd")}/", MountType.ReadWrite)
+                                                             .UseNetwork(networkService).WaitForPort("2113/tcp", 30000 /*30s*/);
+
+            
 
             return containerBuilder.Build();
         }
-
+        
+        /// <summary>
+        /// Gets the event store docker configuration.
+        /// </summary>
+        /// <returns></returns>
         private static EventStoreDockerConfiguration GetEventStoreDockerConfiguration()
         {
             // Determine the ES version from the Environment variable

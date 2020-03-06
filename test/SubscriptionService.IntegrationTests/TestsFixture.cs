@@ -60,7 +60,7 @@
 
                                 JArray jsonArray = JArray.Parse(responseContent);
 
-                                List<String> retrievedEvents = jsonArray.Select(x => x["EventId"].Value<String>()).ToList();
+                                List<String> retrievedEvents = jsonArray.Select(x => x["eventId"].Value<String>()).ToList();
 
                                 if (retrievedEvents.Any() == false)
                                 {
@@ -189,6 +189,27 @@
             Console.WriteLine(traceMessage);
 
             logger.Info(traceMessage);
+        }
+
+        public async Task SaveEventToEventStore(IEventStoreConnection eventStoreConnection, String stream, String[] events)
+        {
+            List<EventData> eventDataList = new List<EventData>();
+
+            foreach (String @event in events)
+            {
+                String type = JToken.Parse(@event)["type"].ToString();
+                String eventIdFromBody = JToken.Parse(@event)["eventId"].ToString();
+                Guid eventId = Guid.NewGuid();
+                if (String.IsNullOrEmpty(eventIdFromBody) == false)
+                {
+                    eventId= Guid.Parse(eventIdFromBody);
+                }
+                EventData eventData = new EventData(eventId, type, true, Encoding.Default.GetBytes(@event), null);
+
+                eventDataList.Add(eventData);
+            }
+
+            await eventStoreConnection.AppendToStreamAsync(stream, -1, eventDataList);
         }
 
         /// <summary>
