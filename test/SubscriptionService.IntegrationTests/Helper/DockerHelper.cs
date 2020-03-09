@@ -212,7 +212,7 @@
                               this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
                               await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
                               this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
-                          }).Wait();
+                          }, null, TimeSpan.FromSeconds(5)).Wait();
             }
         }
 
