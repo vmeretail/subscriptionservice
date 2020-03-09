@@ -39,7 +39,6 @@
 
             await subscriptionService.Start(subscriptions, CancellationToken.None);
             
-
             Console.ReadKey();
         }
 
