@@ -213,15 +213,15 @@
                             eventId = Guid.NewGuid()
                         };
 
-            await this.TestsFixture.PostEventToEventStore(sale1,
-                                                          sale1.eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale1,
+            //                                              sale1.eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
 
-            await this.TestsFixture.PostEventToEventStore(sale2,
-                                                          sale2.eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale2,
+            //                                              sale2.eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
 
             // Setup a subscription configuration to deliver the events to the dummy REST
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -229,6 +229,9 @@
             subscriptionList.Add(Subscription.Create(streamName2, "TestGroup1", this.EndPointUrl1));
 
             await this.EventStoreConnection.ConnectAsync();
+
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName1, new[] {JsonConvert.SerializeObject(sale1)});
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName2, new[] { JsonConvert.SerializeObject(sale2)});
 
             // Create instance of the Subscription Service
             SubscriptionService subscriptionService = new SubscriptionService(this.EventStoreConnection);
@@ -329,10 +332,10 @@
                            eventId = Guid.NewGuid()
                        };
 
-            await this.TestsFixture.PostEventToEventStore(sale,
-                                                          sale.eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale,
+            //                                              sale.eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
 
             // Setup a subscription configuration to deliver the events to the dummy REST
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -340,6 +343,8 @@
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup1", this.EndPointUrl1));
 
             await this.EventStoreConnection.ConnectAsync();
+
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName, new[] {JsonConvert.SerializeObject(sale)});
 
             // Create instance of the Subscription Service
             SubscriptionService subscriptionService = new SubscriptionService(this.EventStoreConnection);
@@ -402,10 +407,11 @@
                            eventId = Guid.NewGuid()
                        };
 
-            await this.TestsFixture.PostEventToEventStore(sale,
-                                                          sale.eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale,
+            //                                              sale.eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName, new[] { JsonConvert.SerializeObject(sale) });
 
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
@@ -447,15 +453,15 @@
                             eventId = Guid.NewGuid()
                         };
 
-            await this.TestsFixture.PostEventToEventStore(sale1,
-                                                          sale1.eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale1,
+            //                                              sale1.eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
 
-            await this.TestsFixture.PostEventToEventStore(sale2,
-                                                          sale2.eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale2,
+            //                                              sale2.eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
 
             // Setup a subscription configuration to deliver the events to the dummy REST
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -465,6 +471,9 @@
             subscriptionList2.Add(Subscription.Create(streamName2, "TestGroup", this.EndPointUrl1));
 
             await this.EventStoreConnection.ConnectAsync();
+
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName1, new[] { JsonConvert.SerializeObject(sale1) });
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName2, new[] { JsonConvert.SerializeObject(sale2) });
 
             // Create instance of the Subscription Service
             SubscriptionService subscriptionService = new SubscriptionService(this.EventStoreConnection);
@@ -503,9 +512,13 @@
         public async Task SubscriptionService_CustomEventFactoryUsed_TranslatedEventsEmitted()
         {
             // 1. Arrange
-            var sale1 = new
+            String aggregateName = "SalesTransactionAggregate";
+            Guid aggregateId = Guid.NewGuid();
+            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
+
+            var sale = new
                         {
-                            AggregateId = Guid.NewGuid(),
+                            AggregateId = aggregateId,
                             id = 1
                         };
 
@@ -515,13 +528,15 @@
 
             subscriptionList.Add(Subscription.Create("$ce-SalesTransactionAggregate", "TestGroup", this.EndPointUrl));
 
-            await this.TestsFixture.PostEventToEventStore(sale1,
-                                                          eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale1,
+            //                                              eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
 
             // 2. Act
             await this.EventStoreConnection.ConnectAsync();
+
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName, new[] { JsonConvert.SerializeObject(sale) });
 
             SubscriptionService subscriptionService = new SubscriptionService(new TestEventFactory(), this.EventStoreConnection);
             subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
@@ -535,7 +550,7 @@
             //Verify we have our expected fields
             JObject obj = JObject.Parse(eventAsJson);
 
-            obj["AggregateId"].Value<String>().ShouldBe(sale1.AggregateId.ToString());
+            obj["AggregateId"].Value<String>().ShouldBe(sale.AggregateId.ToString());
             obj["id"].Value<Int32>().ShouldBe(1);
             obj["EventId"].Value<String>().ShouldBe(eventId.ToString());
 
@@ -550,15 +565,20 @@
         public async Task SubscriptionService_MultipleEventsPosted_AllEventsDelivered()
         {
             // 1. Arrange
+            String aggregateName = "SalesTransactionAggregate";
+            Guid aggregateId1 = Guid.NewGuid();
+            String streamName1 = $"{aggregateName}-{aggregateId1.ToString("N")}";
             var sale1 = new
                         {
-                            AggregateId = Guid.NewGuid(),
+                            AggregateId = aggregateId1,
                             eventId = Guid.NewGuid()
                         };
 
+            Guid aggregateId2 = Guid.NewGuid();
+            String streamName2 = $"{aggregateName}-{aggregateId1.ToString("N")}";
             var sale2 = new
                         {
-                            AggregateId = Guid.NewGuid(),
+                            AggregateId = aggregateId2,
                             eventId = Guid.NewGuid()
                         };
 
@@ -566,18 +586,21 @@
 
             subscriptionList.Add(Subscription.Create("$ce-SalesTransactionAggregate", "TestGroup", this.EndPointUrl));
 
-            await this.TestsFixture.PostEventToEventStore(sale1,
-                                                          sale1.eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale1,
+            //                                              sale1.eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
 
-            await this.TestsFixture.PostEventToEventStore(sale2,
-                                                          sale2.eventId,
-                                                          $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
-                                                          this.EventStoreHttpClient);
+            //await this.TestsFixture.PostEventToEventStore(sale2,
+            //                                              sale2.eventId,
+            //                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
+            //                                              this.EventStoreHttpClient);
 
             // 2. Act
             await this.EventStoreConnection.ConnectAsync();
+
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName1, new[] { JsonConvert.SerializeObject(sale1) });
+            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName2, new[] { JsonConvert.SerializeObject(sale2) });
 
             SubscriptionService subscriptionService = new SubscriptionService(this.EventStoreConnection);
             subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
