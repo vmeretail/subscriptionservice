@@ -13,8 +13,10 @@
     using Ductus.FluentDocker.Model.Builders;
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
+    using EventStore.ClientAPI;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
+    using Newtonsoft.Json;
     using Shouldly;
 
     /// <summary>
@@ -136,67 +138,86 @@
             this.EventStoreHttpPort = this.EventStoreContainer.ToHostExposedEndpoint("2113/tcp").Port;
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
 
-            if (this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion)
+            //if (this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion)
+            //{
+            //    // Verify the Event Store is running
+            //    await Retry.For(async () =>
+            //              {
+            //                  String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
+
+            //                  HttpClient client = new HttpClient();
+
+            //                  HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
+            //                  pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+            //              });
+
+            //    await Retry.For(async () =>
+            //              {
+            //                  String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/info";
+            //                  HttpClient client = new HttpClient();
+
+            //                  HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            //                  requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
+
+            //                  HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
+
+            //                  infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+            //              });
+            //}
+            //else
+            //{
+            // For event store 6
+            // THis is temp code just now as cant get the HTTP interface working over docker :|
+            // Build the Event Store Connection String 
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+            await eventStoreConnection.ConnectAsync();
+            eventStoreConnection.Connected += this.EventStoreConnection_Connected;
+            eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
+            eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
+
+            // Wait in the connection
+            Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
+            if (hasBeenSignalled == false)
             {
-                // Verify the Event Store is running
-                await Retry.For(async () =>
-                          {
-                              String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
-
-                              HttpClient client = new HttpClient();
-
-                              HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
-                              pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                          });
-
-                await Retry.For(async () =>
-                          {
-                              String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/info";
-                              HttpClient client = new HttpClient();
-
-                              HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-                              requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
-
-                              HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
-
-                              infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                          });
+                throw new Exception("ES not connected :|");
             }
-            else
+            this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
+            List<String> events = new List<String>();
+            var testEventData = new
             {
-                //// For event store 6
-                //// THis is temp code just now as cant get the HTTP interface working over docker :|
-                //// Build the Event Store Connection String 
-                //String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+                AggregateId = Guid.NewGuid(),
+                eventId = Guid.NewGuid(),
+                type = "testEvent"
+            };
+            events.Add(JsonConvert.SerializeObject(testEventData));
+            this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
+            await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
+            this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
+            //}
+        }
 
-                //this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
+        ManualResetEvent m = new ManualResetEvent(false);
 
-                //// Setup the Event Store Connection
-                //IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-                //await eventStoreConnection.ConnectAsync();
-                //eventStoreConnection.Connected += this.EventStoreConnection_Connected;
-                //eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
-                //eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
+        private void EventStoreConnection_Reconnecting(object sender, ClientReconnectingEventArgs e)
+        {
+            this.TestsFixture.LogMessageToTrace("Event Store Is Reconnecting");
+        }
 
-                //// Wait in the connection
-                //Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
-                //if (hasBeenSignalled == false)
-                //{
-                //    throw new Exception("ES not connected :|");
-                //}
-                //this.TestsFixture.LogMessageToTrace($"Afer MRE WaitOne()");
-                //List<String> events = new List<String>();
-                //var testEventData = new
-                //{
-                //    AggregateId = Guid.NewGuid(),
-                //    eventId = Guid.NewGuid(),
-                //    type = "testEvent"
-                //};
-                //events.Add(JsonConvert.SerializeObject(testEventData));
-                //this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
-                //await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
-                //this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
-            }
+        private void EventStoreConnection_ErrorOccurred(object sender, ClientErrorEventArgs e)
+        {
+            this.TestsFixture.LogMessageToTrace($"Event Store Connection Error [{e.Exception}]");
+        }
+
+        public void EventStoreConnection_Connected(Object sender,
+                                                   ClientConnectionEventArgs e)
+        {
+            this.TestsFixture.LogMessageToTrace("Event Store Is Connected!!");
+            this.m.Set();
         }
 
         /// <summary>
