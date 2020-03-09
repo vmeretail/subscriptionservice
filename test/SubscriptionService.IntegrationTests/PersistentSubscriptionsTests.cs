@@ -204,22 +204,22 @@
             var sale1 = new
                         {
                             AggregateId = aggregateId1,
-                            EventId = Guid.NewGuid()
+                            eventId = Guid.NewGuid()
                         };
 
             var sale2 = new
                         {
                             AggregateId = aggregateId2,
-                            EventId = Guid.NewGuid()
+                            eventId = Guid.NewGuid()
                         };
 
             await this.TestsFixture.PostEventToEventStore(sale1,
-                                                          sale1.EventId,
+                                                          sale1.eventId,
                                                           $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
                                                           this.EventStoreHttpClient);
 
             await this.TestsFixture.PostEventToEventStore(sale2,
-                                                          sale2.EventId,
+                                                          sale2.eventId,
                                                           $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
                                                           this.EventStoreHttpClient);
 
@@ -242,14 +242,14 @@
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale1.EventId
+                                                    sale1.eventId
                                                 },
                                                 this.EndPointUrl,
                                                 this.ReadModelHttpClient);
 
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale2.EventId
+                                                    sale2.eventId
                                                 },
                                                 this.EndPointUrl1,
                                                 this.ReadModelHttpClient);
@@ -274,7 +274,7 @@
                        {
                            AggregateId = aggregateId,
                            eventId = Guid.NewGuid(),
-                           eventType = "saleEvent"
+                           type = "saleEvent"
                        };
 
             //await this.TestsFixture.PostEventToEventStore(sale,
@@ -326,11 +326,11 @@
             var sale = new
                        {
                            AggregateId = aggregateId,
-                           EventId = Guid.NewGuid()
+                           eventId = Guid.NewGuid()
                        };
 
             await this.TestsFixture.PostEventToEventStore(sale,
-                                                          sale.EventId,
+                                                          sale.eventId,
                                                           $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale.AggregateId:N}",
                                                           this.EventStoreHttpClient);
 
@@ -353,14 +353,14 @@
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale.EventId
+                                                    sale.eventId
                                                 },
                                                 this.EndPointUrl,
                                                 this.ReadModelHttpClient);
 
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale.EventId
+                                                    sale.eventId
                                                 },
                                                 this.EndPointUrl1,
                                                 this.ReadModelHttpClient);
@@ -399,18 +399,18 @@
             var sale = new
                        {
                            AggregateId = aggregateId,
-                           EventId = Guid.NewGuid()
+                           eventId = Guid.NewGuid()
                        };
 
             await this.TestsFixture.PostEventToEventStore(sale,
-                                                          sale.EventId,
+                                                          sale.eventId,
                                                           $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale.AggregateId:N}",
                                                           this.EventStoreHttpClient);
 
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale.EventId
+                                                    sale.eventId
                                                 },
                                                 this.EndPointUrl,
                                                 this.ReadModelHttpClient);
@@ -438,22 +438,22 @@
             var sale1 = new
                         {
                             AggregateId = aggregateId1,
-                            EventId = Guid.NewGuid()
+                            eventId = Guid.NewGuid()
                         };
 
             var sale2 = new
                         {
                             AggregateId = aggregateId2,
-                            EventId = Guid.NewGuid()
+                            eventId = Guid.NewGuid()
                         };
 
             await this.TestsFixture.PostEventToEventStore(sale1,
-                                                          sale1.EventId,
+                                                          sale1.eventId,
                                                           $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
                                                           this.EventStoreHttpClient);
 
             await this.TestsFixture.PostEventToEventStore(sale2,
-                                                          sale2.EventId,
+                                                          sale2.eventId,
                                                           $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
                                                           this.EventStoreHttpClient);
 
@@ -480,14 +480,14 @@
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale1.EventId
+                                                    sale1.eventId
                                                 },
                                                 this.EndPointUrl,
                                                 this.ReadModelHttpClient);
 
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale2.EventId
+                                                    sale2.eventId
                                                 },
                                                 this.EndPointUrl1,
                                                 this.ReadModelHttpClient);
@@ -553,13 +553,13 @@
             var sale1 = new
                         {
                             AggregateId = Guid.NewGuid(),
-                            EventId = Guid.NewGuid()
+                            eventId = Guid.NewGuid()
                         };
 
             var sale2 = new
                         {
                             AggregateId = Guid.NewGuid(),
-                            EventId = Guid.NewGuid()
+                            eventId = Guid.NewGuid()
                         };
 
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -567,12 +567,12 @@
             subscriptionList.Add(Subscription.Create("$ce-SalesTransactionAggregate", "TestGroup", this.EndPointUrl));
 
             await this.TestsFixture.PostEventToEventStore(sale1,
-                                                          sale1.EventId,
+                                                          sale1.eventId,
                                                           $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
                                                           this.EventStoreHttpClient);
 
             await this.TestsFixture.PostEventToEventStore(sale2,
-                                                          sale2.EventId,
+                                                          sale2.eventId,
                                                           $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
                                                           this.EventStoreHttpClient);
 
@@ -589,8 +589,8 @@
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale1.EventId,
-                                                    sale2.EventId
+                                                    sale1.eventId,
+                                                    sale2.eventId
                                                 },
                                                 this.EndPointUrl,
                                                 this.ReadModelHttpClient);

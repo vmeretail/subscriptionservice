@@ -61,7 +61,7 @@
 
                                 JArray jsonArray = JArray.Parse(responseContent);
 
-                                List<String> retrievedEvents = jsonArray.Select(x => x["EventId"].Value<String>()).ToList();
+                                List<String> retrievedEvents = jsonArray.Select(x => x["eventId"].Value<String>()).ToList();
 
                                 if (retrievedEvents.Any() == false)
                                 {
