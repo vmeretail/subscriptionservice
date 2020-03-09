@@ -179,6 +179,8 @@
             return client;
         }
 
+        public EventStoreDockerConfiguration EventStoreDockerConfiguration;
+
         /// <summary>
         /// Logs the message to trace.
         /// </summary>
