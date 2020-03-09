@@ -188,6 +188,7 @@
 
                 // Setup the Event Store Connection
                 IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+                eventStoreConnection.ConnectAsync().Wait();
                 eventStoreConnection.Connected += this.EventStoreConnection_Connected;
                 eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
                 eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
@@ -200,7 +201,6 @@
                                   throw new Exception("ES not connected yet");
                               }
 
-                              await eventStoreConnection.ConnectAsync();
                               List<String> events = new List<String>();
                               var testEventData = new
                                                   {
