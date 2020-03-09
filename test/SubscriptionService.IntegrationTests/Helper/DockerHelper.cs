@@ -101,6 +101,8 @@
 
         #region Methods
 
+        ManualResetEvent m = new ManualResetEvent(false);
+
         /// <summary>
         /// Starts the containers for scenario run.
         /// </summary>
@@ -194,26 +196,19 @@
                 eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
                 eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
 
-                await Retry.For(async () =>
-                          {
-                              if (this.IsConnected == false)
-                              {
-                                  this.TestsFixture.LogMessageToTrace("Event Store Is not connected yet");
-                                  throw new Exception("ES not connected yet");
-                              }
-
-                              List<String> events = new List<String>();
-                              var testEventData = new
-                                                  {
-                                                      AggregateId = Guid.NewGuid(),
-                                                      eventId = Guid.NewGuid(),
-                                                      type = "testEvent"
-                                                  };
-                              events.Add(JsonConvert.SerializeObject(testEventData));
-                              this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
-                              await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
-                              this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
-                          }, null, TimeSpan.FromSeconds(5));
+                // Wait in the connection
+                m.WaitOne(TimeSpan.FromMinutes(1));
+                List<String> events = new List<String>();
+                var testEventData = new
+                                    {
+                                        AggregateId = Guid.NewGuid(),
+                                        eventId = Guid.NewGuid(),
+                                        type = "testEvent"
+                                    };
+                events.Add(JsonConvert.SerializeObject(testEventData));
+                this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
+                await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
+                this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
             }
         }
 
@@ -231,7 +226,7 @@
         public void EventStoreConnection_Connected(Object sender,
                                                    ClientConnectionEventArgs e)
         {
-            this.IsConnected = true;
+            this.m.Set();
             this.TestsFixture.LogMessageToTrace("Event Store Is Connected!!");
         }
 
