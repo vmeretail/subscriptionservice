@@ -38,8 +38,7 @@
             subscriptionService.ErrorHasOccured += Program.SubscriptionService_ErrorHasOccured;
 
             await subscriptionService.Start(subscriptions, CancellationToken.None);
-
-
+            
             Console.ReadKey();
         }
 
