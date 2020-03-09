@@ -8,6 +8,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
+    using EventStore.ClientAPI.SystemData;
     using Microsoft.Extensions.DependencyInjection;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -209,7 +210,7 @@
                 eventDataList.Add(eventData);
             }
             
-            await eventStoreConnection.AppendToStreamAsync(stream, -1, eventDataList);
+            await eventStoreConnection.AppendToStreamAsync(stream, -1, eventDataList, new UserCredentials("admin", "changeit"));
         }
 
         /// <summary>
