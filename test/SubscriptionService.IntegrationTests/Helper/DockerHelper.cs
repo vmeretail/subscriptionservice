@@ -189,11 +189,14 @@
                 // Setup the Event Store Connection
                 IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
                 eventStoreConnection.Connected += this.EventStoreConnection_Connected;
+                eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
+                eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
 
                 Retry.For(async () =>
                           {
                               if (this.IsConnected == false)
                               {
+                                  this.TestsFixture.LogMessageToTrace("Event Store Is not connected yet");
                                   throw new Exception("ES not connected yet");
                               }
 
@@ -211,6 +214,16 @@
                               this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
                           }).Wait();
             }
+        }
+
+        private void EventStoreConnection_Reconnecting(object sender, ClientReconnectingEventArgs e)
+        {
+            this.TestsFixture.LogMessageToTrace("Event Store Is Reconnecting");
+        }
+
+        private void EventStoreConnection_ErrorOccurred(object sender, ClientErrorEventArgs e)
+        {
+            this.TestsFixture.LogMessageToTrace($"Event Store Connection Error [{e.Exception}]");
         }
 
         private Boolean IsConnected = false;
