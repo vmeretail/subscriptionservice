@@ -179,18 +179,23 @@
             }
             else
             {
-                
+                // For event store 6
+                // THis is temp code just now as cant get the HTTP interface working over docker :|
+                // Build the Event Store Connection String 
+                String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+
+                this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
+
+                // Setup the Event Store Connection
+                IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+                eventStoreConnection.Connected += this.EventStoreConnection_Connected;
+
                 Retry.For(async () =>
                           {
-                              // For event store 6
-                              // THis is temp code just now as cant get the HTTP interface working over docker :|
-                              // Build the Event Store Connection String 
-                              String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
-
-                              this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
-
-                              // Setup the Event Store Connection
-                              IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+                              if (this.IsConnected == false)
+                              {
+                                  throw new Exception("ES not connected yet");
+                              }
 
                               await eventStoreConnection.ConnectAsync();
                               List<String> events = new List<String>();
@@ -199,7 +204,7 @@
                                                       AggregateId = Guid.NewGuid(),
                                                       eventId = Guid.NewGuid(),
                                                       type = "testEvent"
-                              };
+                                                  };
                               events.Add(JsonConvert.SerializeObject(testEventData));
                               this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
                               await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
@@ -207,7 +212,15 @@
                           }).Wait();
             }
         }
-        
+
+        private Boolean IsConnected = false;
+        public void EventStoreConnection_Connected(Object sender,
+                                                   ClientConnectionEventArgs e)
+        {
+            this.IsConnected = true;
+            this.TestsFixture.LogMessageToTrace("Event Store Is Connected!!");
+        }
+
         /// <summary>
         /// Creates the HTTP client.
         /// </summary>

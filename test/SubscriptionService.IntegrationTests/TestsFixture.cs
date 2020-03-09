@@ -208,7 +208,7 @@
 
                 eventDataList.Add(eventData);
             }
-
+            
             await eventStoreConnection.AppendToStreamAsync(stream, -1, eventDataList);
         }
 
