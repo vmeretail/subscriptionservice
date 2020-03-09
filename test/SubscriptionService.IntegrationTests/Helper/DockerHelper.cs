@@ -7,6 +7,7 @@
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Threading;
+    using System.Threading.Tasks;
     using Ductus.FluentDocker.Builders;
     using Ductus.FluentDocker.Common;
     using Ductus.FluentDocker.Model.Builders;
@@ -97,7 +98,7 @@
         /// Starts the containers for scenario run.
         /// </summary>
         /// <param name="testname">The testname.</param>
-        public void StartContainersForScenarioRun(String testname)
+        public async Task StartContainersForScenarioRun(String testname)
         {
             this.TestId = Guid.NewGuid();
 
@@ -122,6 +123,9 @@
                 Directory.CreateDirectory(mountDir);
             }
 
+            EventStoreDockerConfiguration eventStoreDockerConfiguration = DockerHelper.GetEventStoreDockerConfiguration();
+            this.TestsFixture.EventStoreDockerConfiguration = eventStoreDockerConfiguration;
+
             this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, mountDir, this.TestsFixture);
             this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, ""); //No trace written
 
@@ -132,29 +136,67 @@
             this.EventStoreHttpPort = this.EventStoreContainer.ToHostExposedEndpoint("2113/tcp").Port;
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
 
-            // Verify the Event Store is running
-            Retry.For(async () =>
-                      {
-                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
+            if (this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion)
+            {
+                // Verify the Event Store is running
+                await Retry.For(async () =>
+                          {
+                              String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
 
-                          HttpClient client = new HttpClient();
+                              HttpClient client = new HttpClient();
 
-                          HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
-                          pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                      }).Wait();
+                              HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
+                              pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+                          });
 
-            Retry.For(async () =>
-                      {
-                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/info";
-                          HttpClient client = new HttpClient();
+                await Retry.For(async () =>
+                          {
+                              String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/info";
+                              HttpClient client = new HttpClient();
 
-                          HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-                          requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
+                              HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                              requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
 
-                          HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
+                              HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
 
-                          infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                      }).Wait();
+                              infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+                          });
+            }
+            else
+            {
+                //// For event store 6
+                //// THis is temp code just now as cant get the HTTP interface working over docker :|
+                //// Build the Event Store Connection String 
+                //String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+
+                //this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
+
+                //// Setup the Event Store Connection
+                //IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+                //await eventStoreConnection.ConnectAsync();
+                //eventStoreConnection.Connected += this.EventStoreConnection_Connected;
+                //eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
+                //eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
+
+                //// Wait in the connection
+                //Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
+                //if (hasBeenSignalled == false)
+                //{
+                //    throw new Exception("ES not connected :|");
+                //}
+                //this.TestsFixture.LogMessageToTrace($"Afer MRE WaitOne()");
+                //List<String> events = new List<String>();
+                //var testEventData = new
+                //{
+                //    AggregateId = Guid.NewGuid(),
+                //    eventId = Guid.NewGuid(),
+                //    type = "testEvent"
+                //};
+                //events.Add(JsonConvert.SerializeObject(testEventData));
+                //this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
+                //await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
+                //this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
+            }
         }
 
         /// <summary>
@@ -207,7 +249,7 @@
             String eventstoreVersion = Environment.GetEnvironmentVariable("ESVersion");
 
             // Support local testing where the environment variable has not been set
-            if (string.IsNullOrEmpty(eventstoreVersion))
+            if (String.IsNullOrEmpty(eventstoreVersion))
             {
                 eventstoreVersion = "default";
             }
@@ -229,14 +271,58 @@
 
             String dockerImage = $"{esConfig.Registry}:{esConfig.Tag}";
 
+            List<String> environmentVariables = new List<String>();
+            environmentVariables.Add("EVENTSTORE_RUN_PROJECTIONS=all");
+            environmentVariables.Add("EVENTSTORE_START_STANDARD_PROJECTIONS=true");
+
+            if (testsFixture.EventStoreDockerConfiguration.IsLegacyVersion == false)
+            {
+                // Add the development mode switch on ES versions > 6 otherwise 
+                // SSL cerificate needed to run
+                environmentVariables.Add("EVENTSTORE_DEV=true");
+            }
+
             testsFixture.LogMessageToTrace($"About to start event store using image {dockerImage}");
             // Create the container
             IContainerService container = new Builder().UseContainer().UseImage(dockerImage, true).ExposePort(2113).ExposePort(1113).WithName(containerName)
-                                                       .WithEnvironment("EVENTSTORE_RUN_PROJECTIONS=all", "EVENTSTORE_START_STANDARD_PROJECTIONS=true")
+                                                       .WithEnvironment(environmentVariables.ToArray())
                                                        .Mount(mountDirectory, $"/var/log/eventstore/{DateTime.Now.ToString("yyyy-MM-dd")}/", MountType.ReadWrite)
                                                        .UseNetwork(networkService).WaitForPort("2113/tcp", 30000 /*30s*/).Build();
 
             return container;
+        }
+
+        /// <summary>
+        /// Gets the event store docker configuration.
+        /// </summary>
+        /// <returns></returns>
+        private static EventStoreDockerConfiguration GetEventStoreDockerConfiguration()
+        {
+            // Determine the ES version from the Environment variable
+            String eventstoreVersion = Environment.GetEnvironmentVariable("ESVersion");
+
+            // Support local testing where the environment variable has not been set
+            if (String.IsNullOrEmpty(eventstoreVersion))
+            {
+                eventstoreVersion = "default";
+            }
+
+            // Now do the version lookup
+            // Create an object to read the configuration
+            IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+
+            // Bind the config
+            Dictionary<String, EventStoreDockerConfiguration> configurationList = new Dictionary<String, EventStoreDockerConfiguration>();
+            config.GetSection("EventStoreDocker").Bind(configurationList);
+
+            // Find the relevant configuration
+            EventStoreDockerConfiguration esConfig = null;
+            if (configurationList.ContainsKey(eventstoreVersion))
+            {
+                esConfig = configurationList[eventstoreVersion];
+            }
+
+            return esConfig;
         }
 
         #endregion

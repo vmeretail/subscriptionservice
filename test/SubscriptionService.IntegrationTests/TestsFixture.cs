@@ -8,6 +8,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
+    using EventStore.ClientAPI.SystemData;
     using Microsoft.Extensions.DependencyInjection;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -220,6 +221,32 @@
                             },
                             TimeSpan.FromSeconds(30),
                             TimeSpan.FromSeconds(10));
+        }
+
+        /// <summary>
+        /// The event store docker configuration
+        /// </summary>
+        public EventStoreDockerConfiguration EventStoreDockerConfiguration;
+
+        public async Task SaveEventToEventStore(IEventStoreConnection eventStoreConnection, String stream, String[] events)
+        {
+            List<EventData> eventDataList = new List<EventData>();
+
+            foreach (String @event in events)
+            {
+                String type = JToken.Parse(@event)["type"].ToString();
+                String eventIdFromBody = JToken.Parse(@event)["eventId"].ToString();
+                Guid eventId = Guid.NewGuid();
+                if (String.IsNullOrEmpty(eventIdFromBody) == false)
+                {
+                    eventId = Guid.Parse(eventIdFromBody);
+                }
+                EventData eventData = new EventData(eventId, type, true, Encoding.Default.GetBytes(@event), null);
+
+                eventDataList.Add(eventData);
+            }
+
+            await eventStoreConnection.AppendToStreamAsync(stream, -1, eventDataList, new UserCredentials("admin", "changeit"));
         }
 
         #endregion

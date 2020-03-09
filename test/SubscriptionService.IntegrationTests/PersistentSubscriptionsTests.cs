@@ -77,7 +77,7 @@
             this.DockerHelper = new DockerHelper(data);
 
             // Start the Event Store & Dummy API
-            this.DockerHelper.StartContainersForScenarioRun(this.TestName);
+            this.DockerHelper.StartContainersForScenarioRun(this.TestName).Wait();
             this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
             this.EventStoreHttpClient = this.TestsFixture.GetHttpClient();

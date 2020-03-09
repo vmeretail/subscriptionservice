@@ -25,6 +25,20 @@
         /// </value>
         public String Tag { get; set; }
 
+        /// <summary>
+        /// Gets a value indicating whether this instance is legacy version.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is legacy version; otherwise, <c>false</c>.
+        /// </value>
+        public Boolean IsLegacyVersion
+        {
+            get
+            {
+                return !Tag.Contains("6.");
+            }
+        }
+
         #endregion
     }
 }
