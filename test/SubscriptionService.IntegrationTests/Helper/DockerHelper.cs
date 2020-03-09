@@ -135,11 +135,18 @@
             this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, ""); //No trace written
 
             this.EventStoreContainer.Start();
+            this.TestsFixture.LogMessageToTrace($"Event Store Container Started");
+            this.EventStoreContainer.State.ShouldBe(ServiceRunningState.Running);
+
             this.DummyRESTContainer.Start();
 
             this.EventStoreTcpPort = this.EventStoreContainer.ToHostExposedEndpoint("1113/tcp").Port;
+            this.TestsFixture.LogMessageToTrace($"Event Store TCP Port [{this.EventStoreTcpPort}]");
             this.EventStoreHttpPort = this.EventStoreContainer.ToHostExposedEndpoint("2113/tcp").Port;
+            this.TestsFixture.LogMessageToTrace($"Event Store HTTP Port [{this.EventStoreHttpPort}]");
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
+
+            this.TestsFixture.LogMessageToTrace($"Event Store Is Legacy Version [{eventStoreDockerConfiguration.IsLegacyVersion}]");
 
             if (eventStoreDockerConfiguration.IsLegacyVersion)
             {
@@ -172,12 +179,15 @@
             }
             else
             {
+                
                 Retry.For(async () =>
                           {
                               // For event store 6
                               // THis is temp code just now as cant get the HTTP interface working over docker :|
                               // Build the Event Store Connection String 
                               String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+
+                              this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
 
                               // Setup the Event Store Connection
                               IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
@@ -191,8 +201,9 @@
                                                       type = "testEvent"
                               };
                               events.Add(JsonConvert.SerializeObject(testEventData));
-
+                              this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
                               await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
+                              this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
                           }).Wait();
             }
         }
