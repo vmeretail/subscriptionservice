@@ -241,6 +241,12 @@
                 {
                     eventId = Guid.Parse(eventIdFromBody);
                 }
+
+                if (String.IsNullOrEmpty(type))
+                {
+                    type = "eventType";
+                }
+
                 EventData eventData = new EventData(eventId, type, true, Encoding.Default.GetBytes(@event), null);
 
                 eventDataList.Add(eventData);
