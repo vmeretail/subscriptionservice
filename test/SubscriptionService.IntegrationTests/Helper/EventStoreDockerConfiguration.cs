@@ -35,7 +35,7 @@
         {
             get
             {
-                return !Tag.Contains("6.");
+                return false;//!Tag.Contains("6.");
             }
         }
 
