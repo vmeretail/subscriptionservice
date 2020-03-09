@@ -228,8 +228,23 @@
 
             await this.EventStoreConnection.ConnectAsync();
 
-            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, $"SalesTransactionAggregate-{sale1.AggregateId:N}", stream1events.ToArray());
-            await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, $"SalesTransactionAggregate-{sale2.AggregateId:N}", stream2events.ToArray());
+            if (this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion)
+            {
+                await this.TestsFixture.PostEventToEventStore(sale1,
+                                                              sale1.eventId,
+                                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
+                                                              this.EventStoreHttpClient);
+                await this.TestsFixture.PostEventToEventStore(sale2,
+                                                              sale2.eventId,
+                                                              $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
+                                                              this.EventStoreHttpClient);
+            }
+            else
+            {
+                await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, $"SalesTransactionAggregate-{sale1.AggregateId:N}", stream1events.ToArray());
+                await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, $"SalesTransactionAggregate-{sale2.AggregateId:N}", stream2events.ToArray());
+            }
+
 
             // Create instance of the Subscription Service
             SubscriptionService subscriptionService = new SubscriptionService(this.EventStoreConnection);
