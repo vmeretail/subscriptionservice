@@ -273,7 +273,8 @@
             var sale = new
                        {
                            AggregateId = aggregateId,
-                           EventId = Guid.NewGuid()
+                           eventId = Guid.NewGuid(),
+                           eventType = "saleEvent"
                        };
 
             //await this.TestsFixture.PostEventToEventStore(sale,
