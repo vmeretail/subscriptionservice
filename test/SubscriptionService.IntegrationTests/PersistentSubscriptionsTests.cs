@@ -189,7 +189,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact(Skip = "Debug")]
+        [Fact]
         public async Task PersistentSubscriptions_EventDelivery_DifferentEventsMultipleEndpoints_EventsAreDelivered()
         {
             // 1. Arrange
