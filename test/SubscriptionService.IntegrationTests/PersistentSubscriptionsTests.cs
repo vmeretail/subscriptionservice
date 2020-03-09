@@ -188,7 +188,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact(Skip = "CIDebug")]
+        [Fact]
         public async Task PersistentSubscriptions_EventDelivery_DifferentEventsMultipleEndpoints_EventsAreDelivered()
         {
             // 1. Arrange
@@ -318,7 +318,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact(Skip = "CIDebug")]
+        [Fact]
         public async Task PersistentSubscriptions_EventDelivery_MultipleEndpoints_EventsAreDelivered()
         {
             // 1. Arrange
