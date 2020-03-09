@@ -198,6 +198,7 @@
 
                 // Wait in the connection
                 m.WaitOne(TimeSpan.FromMinutes(1));
+                this.TestsFixture.LogMessageToTrace($"Afer MRE WaitOne()");
                 List<String> events = new List<String>();
                 var testEventData = new
                                     {
@@ -226,8 +227,8 @@
         public void EventStoreConnection_Connected(Object sender,
                                                    ClientConnectionEventArgs e)
         {
-            this.m.Set();
             this.TestsFixture.LogMessageToTrace("Event Store Is Connected!!");
+            this.m.Set();
         }
 
         /// <summary>
