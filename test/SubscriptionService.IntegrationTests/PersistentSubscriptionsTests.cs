@@ -204,14 +204,16 @@
             var sale1 = new
                         {
                             AggregateId = aggregateId1,
-                            eventId = Guid.NewGuid()
+                            eventId = Guid.NewGuid(),
+                            type = "saleEvent"
                         };
 
             var sale2 = new
                         {
                             AggregateId = aggregateId2,
-                            eventId = Guid.NewGuid()
-                        };
+                            eventId = Guid.NewGuid(),
+                            type = "saleEvent"
+            };
 
             //await this.TestsFixture.PostEventToEventStore(sale1,
             //                                              sale1.eventId,
@@ -329,8 +331,9 @@
             var sale = new
                        {
                            AggregateId = aggregateId,
-                           eventId = Guid.NewGuid()
-                       };
+                           eventId = Guid.NewGuid(),
+                           type = "saleEvent"
+            };
 
             //await this.TestsFixture.PostEventToEventStore(sale,
             //                                              sale.eventId,
@@ -404,8 +407,9 @@
             var sale = new
                        {
                            AggregateId = aggregateId,
-                           eventId = Guid.NewGuid()
-                       };
+                           eventId = Guid.NewGuid(),
+                           type = "salesEvent"
+            };
 
             //await this.TestsFixture.PostEventToEventStore(sale,
             //                                              sale.eventId,
@@ -444,14 +448,16 @@
             var sale1 = new
                         {
                             AggregateId = aggregateId1,
-                            eventId = Guid.NewGuid()
-                        };
+                            eventId = Guid.NewGuid(),
+                            type = "saleEvent"
+            };
 
             var sale2 = new
                         {
                             AggregateId = aggregateId2,
-                            eventId = Guid.NewGuid()
-                        };
+                            eventId = Guid.NewGuid(),
+                            type = "saleEvent"
+            };
 
             //await this.TestsFixture.PostEventToEventStore(sale1,
             //                                              sale1.eventId,
@@ -519,10 +525,10 @@
             var sale = new
                         {
                             AggregateId = aggregateId,
-                            id = 1
-                        };
-
-            Guid eventId = Guid.NewGuid();
+                            id = 1,
+                            type = "salesEvent",
+                            eventId = Guid.NewGuid()
+            };
 
             List<Subscription> subscriptionList = new List<Subscription>();
 
@@ -552,7 +558,7 @@
 
             obj["AggregateId"].Value<String>().ShouldBe(sale.AggregateId.ToString());
             obj["id"].Value<Int32>().ShouldBe(1);
-            obj["EventId"].Value<String>().ShouldBe(eventId.ToString());
+            obj["eventId"].Value<String>().ShouldBe(sale.eventId.ToString());
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
@@ -571,16 +577,18 @@
             var sale1 = new
                         {
                             AggregateId = aggregateId1,
-                            eventId = Guid.NewGuid()
+                            eventId = Guid.NewGuid(),
+                            type = "salesEvent"
                         };
 
             Guid aggregateId2 = Guid.NewGuid();
-            String streamName2 = $"{aggregateName}-{aggregateId1.ToString("N")}";
+            String streamName2 = $"{aggregateName}-{aggregateId2.ToString("N")}";
             var sale2 = new
                         {
                             AggregateId = aggregateId2,
-                            eventId = Guid.NewGuid()
-                        };
+                            eventId = Guid.NewGuid(),
+                            type = "salesEvent"
+            };
 
             List<Subscription> subscriptionList = new List<Subscription>();
 
