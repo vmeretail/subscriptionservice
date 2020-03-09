@@ -10,6 +10,7 @@
     using System.Security.Authentication;
     using System.Text;
     using System.Threading;
+    using System.Threading.Tasks;
     using Ductus.FluentDocker.Builders;
     using Ductus.FluentDocker.Common;
     using Ductus.FluentDocker.Model.Builders;
@@ -104,7 +105,7 @@
         /// Starts the containers for scenario run.
         /// </summary>
         /// <param name="testname">The testname.</param>
-        public void StartContainersForScenarioRun(String testname)
+        public async Task StartContainersForScenarioRun(String testname)
         {
             this.TestId = Guid.NewGuid();
 
@@ -153,7 +154,7 @@
                 String scheme = "http";
 
                 // Verify the Event Store is running
-                Retry.For(async () =>
+                await Retry.For(async () =>
                           {
                               String url = $"{scheme}://127.0.0.1:{this.EventStoreHttpPort}/ping";
 
@@ -161,9 +162,9 @@
 
                               HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
                               pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                          }).Wait();
+                          });
 
-                Retry.For(async () =>
+                await Retry.For(async () =>
                           {
                               String url = $"{scheme}://127.0.0.1:{this.EventStoreHttpPort}/info";
 
@@ -175,7 +176,7 @@
                               HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
 
                               infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                          }).Wait();
+                          });
             }
             else
             {
@@ -188,12 +189,12 @@
 
                 // Setup the Event Store Connection
                 IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-                eventStoreConnection.ConnectAsync().Wait();
+                await eventStoreConnection.ConnectAsync();
                 eventStoreConnection.Connected += this.EventStoreConnection_Connected;
                 eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
                 eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
 
-                Retry.For(async () =>
+                await Retry.For(async () =>
                           {
                               if (this.IsConnected == false)
                               {
@@ -212,7 +213,7 @@
                               this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
                               await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
                               this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
-                          }, null, TimeSpan.FromSeconds(5)).Wait();
+                          }, null, TimeSpan.FromSeconds(5));
             }
         }
 
