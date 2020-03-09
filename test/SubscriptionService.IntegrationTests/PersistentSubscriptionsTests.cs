@@ -162,6 +162,7 @@
                                           maxRetryCount = 0
                                       }
                          };
+
             String responseContent = await responseMessage.Content.ReadAsStringAsync();
             var subscriptionInfo = JsonConvert.DeserializeAnonymousType(responseContent, jester);
 
