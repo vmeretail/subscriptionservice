@@ -300,10 +300,9 @@
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
             // 3. Assert
-            // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale.EventId
+                                                    sale.eventId
                                                 },
                                                 this.EndPointUrl,
                                                 this.ReadModelHttpClient);
