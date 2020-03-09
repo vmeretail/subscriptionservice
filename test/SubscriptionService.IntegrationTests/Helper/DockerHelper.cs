@@ -197,7 +197,11 @@
                 eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
 
                 // Wait in the connection
-                m.WaitOne(TimeSpan.FromMinutes(1));
+                Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
+                if (hasBeenSignalled == false)
+                {
+                    throw new Exception("ES not connected :|");
+                }
                 this.TestsFixture.LogMessageToTrace($"Afer MRE WaitOne()");
                 List<String> events = new List<String>();
                 var testEventData = new
