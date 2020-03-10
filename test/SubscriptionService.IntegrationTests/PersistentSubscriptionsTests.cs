@@ -72,8 +72,6 @@
             ITest test = (ITest)testMember.GetValue(output);
             this.TestName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
 
-            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
-
             this.DockerHelper = new DockerHelper(data);
 
             // Start the Event Store & Dummy API
@@ -185,8 +183,6 @@
             this.EventStoreConnection.ErrorOccurred -= this.TestsFixture.EventStoreConnection_ErrorOccurred;
             this.EventStoreConnection.Reconnecting -= this.TestsFixture.EventStoreConnection_Reconnecting;
             this.DockerHelper.StopContainersForScenarioRun();
-
-            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} stopped. ****");
         }
 
         /// <summary>
@@ -195,6 +191,8 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_DifferentEventsMultipleEndpoints_EventsAreDelivered()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -268,6 +266,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
@@ -276,6 +276,8 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_EventIsDelivered()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -324,6 +326,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
@@ -332,6 +336,8 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_MultipleEndpoints_EventsAreDelivered()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -388,6 +394,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
@@ -396,6 +404,8 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_StartServiceThenPostEvents_EventIsDelivered()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -443,6 +453,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
@@ -451,6 +463,8 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_UpdateSubscriptionConfigurationWhileRunning_EventsAreDelivered()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -528,6 +542,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
@@ -536,6 +552,8 @@
         [Fact]
         public async Task SubscriptionService_CustomEventFactoryUsed_TranslatedEventsEmitted()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -584,6 +602,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
@@ -592,6 +612,8 @@
         [Fact]
         public async Task SubscriptionService_MultipleEventsPosted_AllEventsDelivered()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -653,6 +675,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
@@ -661,6 +685,8 @@
         [Fact]
         public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -684,6 +710,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
@@ -692,6 +720,8 @@
         [Fact]
         public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
         {
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
+
             Boolean isConnected = await this.DockerHelper.IsEventStoreConnected();
             Assert.True(isConnected, "Event Store not connected");
 
@@ -717,6 +747,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ended. ****");
         }
 
         /// <summary>
