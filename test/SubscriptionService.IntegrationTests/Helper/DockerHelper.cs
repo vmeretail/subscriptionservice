@@ -6,6 +6,7 @@
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
+    using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
     using Ductus.FluentDocker.Builders;
@@ -229,6 +230,12 @@
                 //Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
                 for (int i = 0; i < 60; i++)
                 {
+                    // Create a TCP connection
+                    TcpClient client = new TcpClient();
+                    await client.ConnectAsync("127.0.0.1", this.EventStoreTcpPort);
+                    this.TestsFixture.LogMessageToTrace($" client.Connected [{ client.Connected}]");
+                    client.Close();
+
                     if (this.IsConnected)
                     {
                         this.TestsFixture.LogMessageToTrace($"Breaking out now");
