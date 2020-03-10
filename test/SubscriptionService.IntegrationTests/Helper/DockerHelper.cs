@@ -208,6 +208,8 @@
 
         public async Task<Boolean> IsEventStoreConnected()
         {
+            return true;
+
             // THis is temp code just now as cant get the HTTP interface working over docker :|
             // Build the Event Store Connection String 
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
