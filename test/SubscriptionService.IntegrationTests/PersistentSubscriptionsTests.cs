@@ -313,6 +313,11 @@
 
             await this.EventStoreConnection.ConnectAsync();
 
+            for (int i = 0; i < 30; i++)
+            {
+                Thread.Sleep(1000);
+            }
+
             await this.TestsFixture.SaveEventToEventStore(this.EventStoreConnection, streamName, new[] {JsonConvert.SerializeObject(sale)});
 
             // Create instance of the Subscription Service
