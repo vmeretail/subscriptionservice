@@ -72,6 +72,8 @@
             ITest test = (ITest)testMember.GetValue(output);
             this.TestName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
 
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ctor starting ****");
+
             this.DockerHelper = new DockerHelper(data);
 
             // Start the Event Store & Dummy API
@@ -97,6 +99,8 @@
 
             this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
             this.EndPointUrl1 = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events1";
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} ctor ending ****");
         }
 
         #endregion
@@ -183,6 +187,8 @@
             this.EventStoreConnection.ErrorOccurred -= this.TestsFixture.EventStoreConnection_ErrorOccurred;
             this.EventStoreConnection.Reconnecting -= this.TestsFixture.EventStoreConnection_Reconnecting;
             this.DockerHelper.StopContainersForScenarioRun();
+
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} dispose ending ****");
         }
 
         /// <summary>
