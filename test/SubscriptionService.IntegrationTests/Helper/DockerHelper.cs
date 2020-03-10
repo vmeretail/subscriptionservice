@@ -218,10 +218,8 @@
             
             // Wait in the connection
             Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
-            if (hasBeenSignalled == false)
-            {
-                throw new Exception("ES not connected :|");
-            }
+            hasBeenSignalled.ShouldBeTrue("No connected signal from EventStore");
+
             this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
             List<String> events = new List<String>();
             var testEventData = new
