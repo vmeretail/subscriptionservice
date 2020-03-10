@@ -17,6 +17,7 @@
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
     using Newtonsoft.Json;
+    using NLog.LayoutRenderers;
     using Shouldly;
     using Xunit;
 
@@ -202,6 +203,8 @@
             //}
         }
 
+        private Boolean IsConnected;
+
         public async Task<Boolean> IsEventStoreConnected()
         {
             // THis is temp code just now as cant get the HTTP interface working over docker :|
@@ -222,8 +225,16 @@
                 await eventStoreConnection.ConnectAsync();
 
                 // Wait in the connection
-                Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
-                
+                //Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
+                for (int i = 0; i < 60; i++)
+                {
+                    if (this.IsConnected)
+                    {
+                        break;
+                    }
+                    Thread.Sleep(1000);
+                }
+
                 this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
                 List<String> events = new List<String>();
                 var testEventData = new
