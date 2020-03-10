@@ -204,26 +204,26 @@
 
         public async Task<Boolean> IsEventStoreConnected()
         {
+            // THis is temp code just now as cant get the HTTP interface working over docker :|
+            // Build the Event Store Connection String 
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString, null, "Connection1");
+            this.TestsFixture.LogMessageToTrace($"Created [{eventStoreConnection.ConnectionName}]");
+            eventStoreConnection.Connected += this.EventStoreConnection_Connected;
+            eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
+            eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
+
             try
             {
-                // THis is temp code just now as cant get the HTTP interface working over docker :|
-                // Build the Event Store Connection String 
-                String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
-
-                this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
-
-                // Setup the Event Store Connection
-                IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-                eventStoreConnection.Connected += this.EventStoreConnection_Connected;
-                eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
-                eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
                 await eventStoreConnection.ConnectAsync();
 
                 // Wait in the connection
                 Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
                 
-                Assert.True(hasBeenSignalled, "No connected signal from EventStore");
-
                 this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
                 List<String> events = new List<String>();
                 var testEventData = new
@@ -236,7 +236,7 @@
                 this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
                 await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
                 this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
-
+                
                 eventStoreConnection.Close();
                 eventStoreConnection.Connected -= this.EventStoreConnection_Connected;
                 eventStoreConnection.ErrorOccurred -= EventStoreConnection_ErrorOccurred;
@@ -245,6 +245,13 @@
             }
             catch(Exception e)
             {
+                this.TestsFixture.LogMessageToTrace(e.Message);
+
+                if (e.InnerException != null)
+                {
+                    this.TestsFixture.LogMessageToTrace(e.InnerException.Message);
+                }
+
                 return false;
             }
         }
@@ -253,18 +260,18 @@
 
         private void EventStoreConnection_Reconnecting(object sender, ClientReconnectingEventArgs e)
         {
-            this.TestsFixture.LogMessageToTrace("Event Store Is Reconnecting");
+            this.TestsFixture.LogMessageToTrace($"Event Store Is Reconnecting [{e.Connection.ConnectionName}]");
         }
 
         private void EventStoreConnection_ErrorOccurred(object sender, ClientErrorEventArgs e)
         {
-            this.TestsFixture.LogMessageToTrace($"Event Store Connection Error [{e.Exception}]");
+            this.TestsFixture.LogMessageToTrace($"Event Store Connection [{e.Connection.ConnectionName}] Error [{e.Exception}]");
         }
 
         public void EventStoreConnection_Connected(Object sender,
                                                    ClientConnectionEventArgs e)
         {
-            this.TestsFixture.LogMessageToTrace("Event Store Is Connected!!");
+            this.TestsFixture.LogMessageToTrace($"Event Store Is Connected!! [{e.Connection.ConnectionName}]");
             this.m.Set();
         }
 

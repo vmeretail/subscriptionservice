@@ -90,7 +90,9 @@
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
 
             // Setup the Event Store Connection
-            this.EventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+            this.EventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString, null, $"{this.TestName} Connection");
+
+            this.TestsFixture.LogMessageToTrace($"Created [{this.EventStoreConnection.ConnectionName}]");
 
             this.EventStoreConnection.Connected += this.TestsFixture.EventStoreConnection_Connected;
             this.EventStoreConnection.Closed += this.TestsFixture.EventStoreConnection_Closed;
