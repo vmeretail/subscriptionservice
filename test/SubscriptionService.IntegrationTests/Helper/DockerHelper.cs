@@ -169,6 +169,42 @@
             // For event store 6
             // THis is temp code just now as cant get the HTTP interface working over docker :|
             // Build the Event Store Connection String 
+            //String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+
+            //this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
+
+            // Setup the Event Store Connection
+            //IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+            //eventStoreConnection.Connected += this.EventStoreConnection_Connected;
+            //eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
+            //eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
+            //await eventStoreConnection.ConnectAsync();
+            
+            // Wait in the connection
+            //Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
+            //if (hasBeenSignalled == false)
+            //{
+            //    throw new Exception("ES not connected :|");
+            //}
+            //this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
+            //List<String> events = new List<String>();
+            //var testEventData = new
+            //{
+            //    AggregateId = Guid.NewGuid(),
+            //    eventId = Guid.NewGuid(),
+            //    type = "testEvent"
+            //};
+            //events.Add(JsonConvert.SerializeObject(testEventData));
+            //this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
+            //await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
+            //this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
+            //}
+        }
+
+        public async Task VerifyEventStoreViaTCP()
+        {
+            // THis is temp code just now as cant get the HTTP interface working over docker :|
+            // Build the Event Store Connection String 
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
 
             this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
@@ -189,16 +225,15 @@
             this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
             List<String> events = new List<String>();
             var testEventData = new
-            {
-                AggregateId = Guid.NewGuid(),
-                eventId = Guid.NewGuid(),
-                type = "testEvent"
-            };
+                                {
+                                    AggregateId = Guid.NewGuid(),
+                                    eventId = Guid.NewGuid(),
+                                    type = "testEvent"
+                                };
             events.Add(JsonConvert.SerializeObject(testEventData));
             this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
             await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
             this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
-            //}
         }
 
         ManualResetEvent m = new ManualResetEvent(false);

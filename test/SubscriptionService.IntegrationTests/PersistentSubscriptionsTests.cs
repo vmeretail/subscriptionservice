@@ -191,6 +191,7 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_DifferentEventsMultipleEndpoints_EventsAreDelivered()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
             // 1. Arrange
             String aggregateName1 = "SalesTransactionAggregate";
             Guid aggregateId1 = Guid.NewGuid();
@@ -269,6 +270,7 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_EventIsDelivered()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
             Guid aggregateId = Guid.NewGuid();
@@ -322,6 +324,7 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_MultipleEndpoints_EventsAreDelivered()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
             Guid aggregateId = Guid.NewGuid();
@@ -383,6 +386,7 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_StartServiceThenPostEvents_EventIsDelivered()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
             Guid aggregateId = Guid.NewGuid();
@@ -435,6 +439,7 @@
         [Fact]
         public async Task PersistentSubscriptions_EventDelivery_UpdateSubscriptionConfigurationWhileRunning_EventsAreDelivered()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
             // 1. Arrange
             String aggregateName1 = "SalesTransactionAggregate";
             Guid aggregateId1 = Guid.NewGuid();
@@ -517,6 +522,7 @@
         [Fact]
         public async Task SubscriptionService_CustomEventFactoryUsed_TranslatedEventsEmitted()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
             Guid aggregateId = Guid.NewGuid();
@@ -570,6 +576,7 @@
         [Fact]
         public async Task SubscriptionService_MultipleEventsPosted_AllEventsDelivered()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
             Guid aggregateId1 = Guid.NewGuid();
@@ -636,6 +643,7 @@
         [Fact]
         public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
             // 1. Arrange
             List<Subscription> subscriptionList = new List<Subscription>();
             String streamName = "$ce-SalesTransactionAggregate";
@@ -664,6 +672,8 @@
         [Fact]
         public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
         {
+            await this.DockerHelper.VerifyEventStoreViaTCP();
+
             // 1. Arrange
             List<Subscription> subscriptionList = new List<Subscription>();
             String streamName = "$ce-SalesTransactionAggregate";
