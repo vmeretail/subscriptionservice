@@ -72,7 +72,7 @@
             ITest test = (ITest)testMember.GetValue(output);
             this.TestName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
 
-            this.TestsFixture.LogMessageToTrace($"{this.TestName} starting");
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} starting ****");
 
             this.DockerHelper = new DockerHelper(data);
 
@@ -180,9 +180,13 @@
             this.TestsFixture.LogMessageToTrace($"{this.TestName} about to teardown");
 
             this.EventStoreConnection.Close();
+            this.EventStoreConnection.Connected -= this.TestsFixture.EventStoreConnection_Connected;
+            this.EventStoreConnection.Closed -= this.TestsFixture.EventStoreConnection_Closed;
+            this.EventStoreConnection.ErrorOccurred -= this.TestsFixture.EventStoreConnection_ErrorOccurred;
+            this.EventStoreConnection.Reconnecting -= this.TestsFixture.EventStoreConnection_Reconnecting;
             this.DockerHelper.StopContainersForScenarioRun();
 
-            this.TestsFixture.LogMessageToTrace($"{this.TestName} stopped.");
+            this.TestsFixture.LogMessageToTrace($"**** {this.TestName} stopped. ****");
         }
 
         /// <summary>

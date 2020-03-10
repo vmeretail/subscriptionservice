@@ -234,6 +234,11 @@
             this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
             await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
             this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
+
+            eventStoreConnection.Close();
+            eventStoreConnection.Connected -= this.EventStoreConnection_Connected;
+            eventStoreConnection.ErrorOccurred -= EventStoreConnection_ErrorOccurred;
+            eventStoreConnection.Reconnecting -= EventStoreConnection_Reconnecting;
         }
 
         ManualResetEvent m = new ManualResetEvent(false);
