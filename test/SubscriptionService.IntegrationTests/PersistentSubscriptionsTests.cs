@@ -78,27 +78,27 @@
 
             // Start the Event Store & Dummy API
             this.DockerHelper.StartContainersForScenarioRun(this.TestName);
-            this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
+            //this.EventStoreHttpAddress = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/streams";
 
-            this.EventStoreHttpClient = this.TestsFixture.GetHttpClient();
+            //this.EventStoreHttpClient = this.TestsFixture.GetHttpClient();
 
-            this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-            this.ReadModelHttpClient = this.TestsFixture.GetHttpClient();
+            //this.EventStoreHttpClient.DefaultRequestHeaders.Authorization =
+            //    new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
+            //this.ReadModelHttpClient = this.TestsFixture.GetHttpClient();
 
-            // Build the Event Store Connection String 
-            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+            //// Build the Event Store Connection String 
+            //String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
 
-            // Setup the Event Store Connection
-            this.EventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+            //// Setup the Event Store Connection
+            //this.EventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
 
-            this.EventStoreConnection.Connected += this.TestsFixture.EventStoreConnection_Connected;
-            this.EventStoreConnection.Closed += this.TestsFixture.EventStoreConnection_Closed;
-            this.EventStoreConnection.ErrorOccurred += this.TestsFixture.EventStoreConnection_ErrorOccurred;
-            this.EventStoreConnection.Reconnecting += this.TestsFixture.EventStoreConnection_Reconnecting;
+            //this.EventStoreConnection.Connected += this.TestsFixture.EventStoreConnection_Connected;
+            //this.EventStoreConnection.Closed += this.TestsFixture.EventStoreConnection_Closed;
+            //this.EventStoreConnection.ErrorOccurred += this.TestsFixture.EventStoreConnection_ErrorOccurred;
+            //this.EventStoreConnection.Reconnecting += this.TestsFixture.EventStoreConnection_Reconnecting;
 
-            this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
-            this.EndPointUrl1 = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events1";
+            //this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
+            //this.EndPointUrl1 = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events1";
         }
 
         #endregion
@@ -141,6 +141,55 @@
 
         #region Methods
 
+        [Fact]
+        public async Task TestMethod()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod started");
+
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            var eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+
+            eventStoreConnection.Connected += (sender,
+                                               args) =>
+                                              {
+                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                              };
+
+            eventStoreConnection.Closed += (sender,
+                                            args) =>
+                                           {
+                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                           };
+
+            eventStoreConnection.ErrorOccurred += (sender,
+                                                   args) =>
+                                                  {
+                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                  };
+
+            eventStoreConnection.Reconnecting += (sender,
+                                                  args) =>
+                                                 {
+                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                 };
+
+            this.TestsFixture.LogMessageToTrace($"About connect");
+
+            await eventStoreConnection.ConnectAsync();
+
+            this.TestsFixture.LogMessageToTrace($"After connect");
+
+            EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes("{\"id\" : 1}"), null);
+
+            await eventStoreConnection.AppendToStreamAsync("Test", -1, new[] {eventData});
+
+            this.TestsFixture.LogMessageToTrace($"TestMethod finished");
+        }
+
         /// <summary>
         /// Checks the subscription has been created.
         /// </summary>
@@ -179,7 +228,7 @@
         {
             this.TestsFixture.LogMessageToTrace($"{this.TestName} about to teardown");
 
-            this.EventStoreConnection.Close();
+            //this.EventStoreConnection.Close();
             this.DockerHelper.StopContainersForScenarioRun();
 
             this.TestsFixture.LogMessageToTrace($"{this.TestName} stopped.");
@@ -188,7 +237,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task PersistentSubscriptions_EventDelivery_DifferentEventsMultipleEndpoints_EventsAreDelivered()
         {
             // 1. Arrange
@@ -261,7 +310,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task PersistentSubscriptions_EventDelivery_EventIsDelivered()
         {
             // 1. Arrange
@@ -312,7 +361,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task PersistentSubscriptions_EventDelivery_MultipleEndpoints_EventsAreDelivered()
         {
             // 1. Arrange
@@ -370,7 +419,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task PersistentSubscriptions_EventDelivery_StartServiceThenPostEvents_EventIsDelivered()
         {
             // 1. Arrange
@@ -420,7 +469,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task PersistentSubscriptions_EventDelivery_UpdateSubscriptionConfigurationWhileRunning_EventsAreDelivered()
         {
             // 1. Arrange
@@ -497,7 +546,7 @@
         /// <summary>
         /// Subscriptions the service custom event factory used translated events emitted.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task SubscriptionService_CustomEventFactoryUsed_TranslatedEventsEmitted()
         {
             // 1. Arrange
@@ -544,7 +593,7 @@
         /// <summary>
         /// Subscriptions the service multiple events posted all events delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task SubscriptionService_MultipleEventsPosted_AllEventsDelivered()
         {
             // 1. Arrange
@@ -600,7 +649,7 @@
         /// <summary>
         /// Subscriptions the service optional parameters default persistent subscription created.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
         {
             // 1. Arrange
@@ -628,7 +677,7 @@
         /// <summary>
         /// Subscriptions the service optional parameters set persistent subscription created.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
         {
             // 1. Arrange
