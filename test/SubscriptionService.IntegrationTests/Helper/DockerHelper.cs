@@ -18,6 +18,7 @@
     using Microsoft.Extensions.Configuration;
     using Newtonsoft.Json;
     using Shouldly;
+    using Xunit;
 
     /// <summary>
     /// 
@@ -201,42 +202,51 @@
             //}
         }
 
-        public async Task VerifyEventStoreViaTCP()
+        public async Task<Boolean> IsEventStoreConnected()
         {
-            // THis is temp code just now as cant get the HTTP interface working over docker :|
-            // Build the Event Store Connection String 
-            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+            try
+            {
+                // THis is temp code just now as cant get the HTTP interface working over docker :|
+                // Build the Event Store Connection String 
+                String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
 
-            this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
+                this.TestsFixture.LogMessageToTrace($"Event Store Connection String Is Legacy Version [{connectionString}]");
 
-            // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-            eventStoreConnection.Connected += this.EventStoreConnection_Connected;
-            eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
-            eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
-            await eventStoreConnection.ConnectAsync();
-            
-            // Wait in the connection
-            Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
-            hasBeenSignalled.ShouldBeTrue("No connected signal from EventStore");
+                // Setup the Event Store Connection
+                IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+                eventStoreConnection.Connected += this.EventStoreConnection_Connected;
+                eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
+                eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
+                await eventStoreConnection.ConnectAsync();
 
-            this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
-            List<String> events = new List<String>();
-            var testEventData = new
-                                {
-                                    AggregateId = Guid.NewGuid(),
-                                    eventId = Guid.NewGuid(),
-                                    type = "testEvent"
-                                };
-            events.Add(JsonConvert.SerializeObject(testEventData));
-            this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
-            await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
-            this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
+                // Wait in the connection
+                Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
+                
+                Assert.True(hasBeenSignalled, "No connected signal from EventStore");
 
-            eventStoreConnection.Close();
-            eventStoreConnection.Connected -= this.EventStoreConnection_Connected;
-            eventStoreConnection.ErrorOccurred -= EventStoreConnection_ErrorOccurred;
-            eventStoreConnection.Reconnecting -= EventStoreConnection_Reconnecting;
+                this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
+                List<String> events = new List<String>();
+                var testEventData = new
+                                    {
+                                        AggregateId = Guid.NewGuid(),
+                                        eventId = Guid.NewGuid(),
+                                        type = "testEvent"
+                                    };
+                events.Add(JsonConvert.SerializeObject(testEventData));
+                this.TestsFixture.LogMessageToTrace($"About to write test event to Event Store");
+                await this.TestsFixture.SaveEventToEventStore(eventStoreConnection, "TestStream", events.ToArray());
+                this.TestsFixture.LogMessageToTrace($"Test Event written to Event Store");
+
+                eventStoreConnection.Close();
+                eventStoreConnection.Connected -= this.EventStoreConnection_Connected;
+                eventStoreConnection.ErrorOccurred -= EventStoreConnection_ErrorOccurred;
+                eventStoreConnection.Reconnecting -= EventStoreConnection_Reconnecting;
+                return true;
+            }
+            catch(Exception e)
+            {
+                return false;
+            }
         }
 
         ManualResetEvent m = new ManualResetEvent(false);
