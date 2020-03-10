@@ -224,18 +224,20 @@
             {
                 await eventStoreConnection.ConnectAsync();
 
+                this.TestsFixture.LogMessageToTrace($"About to enter for loop");
                 // Wait in the connection
                 //Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
                 for (int i = 0; i < 60; i++)
                 {
                     if (this.IsConnected)
                     {
+                        this.TestsFixture.LogMessageToTrace($"Breaking out now");
                         break;
                     }
                     Thread.Sleep(1000);
                 }
 
-                this.TestsFixture.LogMessageToTrace($"Afer WaitOne()");
+                this.TestsFixture.LogMessageToTrace($"After for loop");
                 List<String> events = new List<String>();
                 var testEventData = new
                                     {
