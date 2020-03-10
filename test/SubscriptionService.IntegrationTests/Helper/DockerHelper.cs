@@ -286,6 +286,7 @@
         {
             this.TestsFixture.LogMessageToTrace($"Event Store Is Connected!! [{e.Connection.ConnectionName}]");
             this.m.Set();
+            this.IsConnected = true;
         }
 
         /// <summary>
