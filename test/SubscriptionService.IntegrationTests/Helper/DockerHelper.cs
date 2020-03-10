@@ -175,11 +175,11 @@
 
             // Setup the Event Store Connection
             IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-            await eventStoreConnection.ConnectAsync();
             eventStoreConnection.Connected += this.EventStoreConnection_Connected;
             eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
             eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
-
+            await eventStoreConnection.ConnectAsync();
+            
             // Wait in the connection
             Boolean hasBeenSignalled = m.WaitOne(TimeSpan.FromSeconds(30));
             if (hasBeenSignalled == false)
