@@ -810,12 +810,12 @@
             subscriptionList.Add(Subscription.Create("$ce-SalesTransactionAggregate", "TestGroup", this.EndPointUrl));
 
             String eventAsString = JsonConvert.SerializeObject(sale1);
-            EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
+            EventData eventData = new EventData(sale1.EventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
             await eventStoreConnection.AppendToStreamAsync(streamName1, -1, new[] { eventData });
 
             eventAsString = JsonConvert.SerializeObject(sale2);
-            eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
+            eventData = new EventData(sale2.EventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
             await eventStoreConnection.AppendToStreamAsync(streamName2, -1, new[] { eventData });
 
