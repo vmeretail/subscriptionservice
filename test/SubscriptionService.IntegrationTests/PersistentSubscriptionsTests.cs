@@ -505,82 +505,115 @@
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
-        ///// <summary>
-        ///// Persistents the subscriptions event delivery event is delivered.
-        ///// </summary>
-        //[Fact]
-        //public async Task PersistentSubscriptions_EventDelivery_UpdateSubscriptionConfigurationWhileRunning_EventsAreDelivered()
-        //{
-        //    // 1. Arrange
-        //    String aggregateName1 = "SalesTransactionAggregate";
-        //    Guid aggregateId1 = Guid.NewGuid();
-        //    String streamName1 = $"{aggregateName1}-{aggregateId1.ToString("N")}";
+        /// <summary>
+        /// Persistents the subscriptions event delivery event is delivered.
+        /// </summary>
+        [Fact]
+        public async Task PersistentSubscriptions_EventDelivery_UpdateSubscriptionConfigurationWhileRunning_EventsAreDelivered()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
 
-        //    String aggregateName2 = "SalesTransactionAggregate";
-        //    Guid aggregateId2 = Guid.NewGuid();
-        //    String streamName2 = $"{aggregateName2}-{aggregateId2.ToString("N")}";
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
 
-        //    // Setup some dummy events in the Event Store
-        //    var sale1 = new
-        //                {
-        //                    AggregateId = aggregateId1,
-        //                    EventId = Guid.NewGuid()
-        //                };
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
-        //    var sale2 = new
-        //                {
-        //                    AggregateId = aggregateId2,
-        //                    EventId = Guid.NewGuid()
-        //                };
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
 
-        //    await this.TestsFixture.PostEventToEventStore(sale1,
-        //                                                  sale1.EventId,
-        //                                                  $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
-        //                                                  this.EventStoreHttpClient);
+            eventStoreConnection.Connected += (sender,
+                                               args) =>
+                                              {
+                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                              };
 
-        //    await this.TestsFixture.PostEventToEventStore(sale2,
-        //                                                  sale2.EventId,
-        //                                                  $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale2.AggregateId:N}",
-        //                                                  this.EventStoreHttpClient);
+            eventStoreConnection.Closed += (sender,
+                                            args) =>
+                                           {
+                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                           };
 
-        //    // Setup a subscription configuration to deliver the events to the dummy REST
-        //    List<Subscription> subscriptionList = new List<Subscription>();
-        //    subscriptionList.Add(Subscription.Create(streamName1, "TestGroup", this.EndPointUrl));
+            eventStoreConnection.ErrorOccurred += (sender,
+                                                   args) =>
+                                                  {
+                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                  };
 
-        //    List<Subscription> subscriptionList2 = new List<Subscription>();
-        //    subscriptionList2.Add(Subscription.Create(streamName2, "TestGroup", this.EndPointUrl1));
+            eventStoreConnection.Reconnecting += (sender,
+                                                  args) =>
+                                                 {
+                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                 };
 
-        //    await this.EventStoreConnection.ConnectAsync();
+            await eventStoreConnection.ConnectAsync();
 
-        //    // Create instance of the Subscription Service
-        //    SubscriptionService subscriptionService = new SubscriptionService(this.EventStoreConnection);
-        //    subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-        //    subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            // 1. Arrange
+            String aggregateName1 = "SalesTransactionAggregate";
+            Guid aggregateId1 = Guid.NewGuid();
+            String streamName1 = $"{aggregateName1}-{aggregateId1.ToString("N")}";
 
-        //    // 2. Act
-        //    // Start the subscription service
-        //    await subscriptionService.Start(subscriptionList, CancellationToken.None);
+            String aggregateName2 = "SalesTransactionAggregate";
+            Guid aggregateId2 = Guid.NewGuid();
+            String streamName2 = $"{aggregateName2}-{aggregateId2.ToString("N")}";
 
-        //    await subscriptionService.Start(subscriptionList2, CancellationToken.None);
+            // Setup some dummy events in the Event Store
+            var sale1 = new
+            {
+                AggregateId = aggregateId1,
+                EventId = Guid.NewGuid()
+            };
 
-        //    // 3. Assert
-        //    await this.TestsFixture.CheckEvents(new List<Guid>
-        //                                        {
-        //                                            sale1.EventId
-        //                                        },
-        //                                        this.EndPointUrl,
-        //                                        this.ReadModelHttpClient);
+            var sale2 = new
+            {
+                AggregateId = aggregateId2,
+                EventId = Guid.NewGuid()
+            };
 
-        //    await this.TestsFixture.CheckEvents(new List<Guid>
-        //                                        {
-        //                                            sale2.EventId
-        //                                        },
-        //                                        this.EndPointUrl1,
-        //                                        this.ReadModelHttpClient);
+            String eventAsString = JsonConvert.SerializeObject(sale1);
+            EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-        //    // 4. Cleanup
-        //    await subscriptionService.Stop(CancellationToken.None);
-        //}
+            await eventStoreConnection.AppendToStreamAsync(streamName1, -1, new[] { eventData });
+
+            eventAsString = JsonConvert.SerializeObject(sale2);
+            eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
+
+            await eventStoreConnection.AppendToStreamAsync(streamName2, -1, new[] { eventData });
+
+            // Setup a subscription configuration to deliver the events to the dummy REST
+            List<Subscription> subscriptionList = new List<Subscription>();
+            subscriptionList.Add(Subscription.Create(streamName1, "TestGroup", this.EndPointUrl));
+
+            List<Subscription> subscriptionList2 = new List<Subscription>();
+            subscriptionList2.Add(Subscription.Create(streamName2, "TestGroup", this.EndPointUrl1));
+
+            // Create instance of the Subscription Service
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+
+            // 2. Act
+            // Start the subscription service
+            await subscriptionService.Start(subscriptionList, CancellationToken.None);
+
+            await subscriptionService.Start(subscriptionList2, CancellationToken.None);
+
+            // 3. Assert
+            await this.TestsFixture.CheckEvents(new List<Guid>
+                                                {
+                                                    sale1.EventId
+                                                },
+                                                this.EndPointUrl,
+                                                this.ReadModelHttpClient);
+
+            await this.TestsFixture.CheckEvents(new List<Guid>
+                                                {
+                                                    sale2.EventId
+                                                },
+                                                this.EndPointUrl1,
+                                                this.ReadModelHttpClient);
+
+            // 4. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+        }
 
         ///// <summary>
         ///// Subscriptions the service custom event factory used translated events emitted.
