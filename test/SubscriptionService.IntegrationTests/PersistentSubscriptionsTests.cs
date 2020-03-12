@@ -137,7 +137,7 @@
             requestMessage.Headers.Add("Accept", @"application/json");
             HttpClient client = DockerHelper.CreateHttpClient(uri);
             HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, CancellationToken.None);
-
+            responseMessage.IsSuccessStatusCode.ShouldBeTrue($"Response Code [{responseMessage.StatusCode} returned]");
             var jester = new
             {
                 groupName = String.Empty,
@@ -149,6 +149,10 @@
                 }
             };
             String responseContent = await responseMessage.Content.ReadAsStringAsync();
+            responseContent.ShouldNotBeNullOrEmpty();
+
+            this.TestsFixture.LogMessageToTrace($"Response Content is [{responseContent}]");
+
             var subscriptionInfo = JsonConvert.DeserializeAnonymousType(responseContent, jester);
 
             subscriptionInfo.groupName.ShouldBe(subscription.GroupName);
