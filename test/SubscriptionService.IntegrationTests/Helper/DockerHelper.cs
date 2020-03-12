@@ -159,41 +159,41 @@
             //              infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
             //          }).Wait();
 
-            // Setup the Event Store Connection
-            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+            //// Setup the Event Store Connection
+            //String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+            //IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
 
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.ManualResetEvent.Set();
-                                                  this.TestsFixture.LogMessageToTrace($"Ctor - Connected");
-                                              };
+            //eventStoreConnection.Connected += (sender,
+            //                                   args) =>
+            //                                  {
+            //                                      this.ManualResetEvent.Set();
+            //                                      this.TestsFixture.LogMessageToTrace($"Ctor - Connected");
+            //                                  };
 
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Ctor - Closed");
-                                           };
+            //eventStoreConnection.Closed += (sender,
+            //                                args) =>
+            //                               {
+            //                                   this.TestsFixture.LogMessageToTrace($"Ctor - Closed");
+            //                               };
 
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"Ctor - ErrorOccurred {args.Exception.ToString()}");
-                                                  };
+            //eventStoreConnection.ErrorOccurred += (sender,
+            //                                       args) =>
+            //                                      {
+            //                                          this.TestsFixture.LogMessageToTrace($"Ctor - ErrorOccurred {args.Exception.ToString()}");
+            //                                      };
 
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Ctor - Reconnecting");
-                                                 };
+            //eventStoreConnection.Reconnecting += (sender,
+            //                                      args) =>
+            //                                     {
+            //                                         this.TestsFixture.LogMessageToTrace($"Ctor - Reconnecting");
+            //                                     };
 
-            eventStoreConnection.ConnectAsync().Wait();
+            //eventStoreConnection.ConnectAsync().Wait();
 
-            this.ManualResetEvent.WaitOne(30000);
-
-            this.TestsFixture.LogMessageToTrace($"Ready to Go...");
-            eventStoreConnection.Close();
+            //this.ManualResetEvent.WaitOne(30000);
+            //eventStoreConnection.Close();
+            //this.TestsFixture.LogMessageToTrace($"Ready to Go...");
+            
         }
 
         /// <summary>
