@@ -183,7 +183,7 @@
 
             await eventStoreConnection.ConnectAsync();
 
-            Boolean isSignalled = manualResetEvent.WaitOne(TimeSpan.FromSeconds(30));
+            Boolean isSignalled = manualResetEvent.WaitOne(TimeSpan.FromSeconds(60));
 
             isSignalled.ShouldBeTrue($"Waited and didn't get a connection.");
 
@@ -194,6 +194,8 @@
             await eventStoreConnection.AppendToStreamAsync("Test", -1, new[] {eventData});
 
             this.TestsFixture.LogMessageToTrace($"TestMethod finished");
+
+            eventStoreConnection.Close();
         }
 
         ManualResetEvent manualResetEvent = new ManualResetEvent(false);
