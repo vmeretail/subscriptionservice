@@ -839,7 +839,7 @@
         /// <summary>
         /// Subscriptions the service optional parameters default persistent subscription created.
         /// </summary>
-        [Fact(Skip = "Debug")]
+        [Fact]
         public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
         {
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
@@ -891,7 +891,11 @@
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
             // 3. Assert
-            subscriptionList.ForEach(async s => await this.CheckSubscriptionHasBeenCreated(s));
+            //subscriptionList.ForEach(async s => await this.CheckSubscriptionHasBeenCreated(s));
+            foreach (Subscription subscription in subscriptionList)
+            {
+                await this.CheckSubscriptionHasBeenCreated(subscription);
+            }
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
@@ -902,7 +906,7 @@
         /// <summary>
         /// Subscriptions the service optional parameters set persistent subscription created.
         /// </summary>
-        [Fact(Skip = "Debug")]
+        [Fact]
         public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
         {
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
@@ -956,7 +960,11 @@
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
             // 3. Assert
-            subscriptionList.ForEach(async s => await this.CheckSubscriptionHasBeenCreated(s));
+            //subscriptionList.ForEach(async s => await this.CheckSubscriptionHasBeenCreated(s));
+            foreach (Subscription subscription in subscriptionList)
+            {
+                await this.CheckSubscriptionHasBeenCreated(subscription);
+            }
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
