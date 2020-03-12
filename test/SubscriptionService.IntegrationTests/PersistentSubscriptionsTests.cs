@@ -368,7 +368,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact]
+        [Fact(Skip = ":|")]
         public async Task PersistentSubscriptions_EventDelivery_MultipleEndpoints_EventsAreDelivered()
         {
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
@@ -743,7 +743,7 @@
         /// <summary>
         /// Subscriptions the service multiple events posted all events delivered.
         /// </summary>
-        [Fact(Skip = ":|")]
+        [Fact]
         public async Task SubscriptionService_MultipleEventsPosted_AllEventsDelivered()
         {
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
