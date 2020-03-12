@@ -44,8 +44,8 @@ jobs:
       uses: mxschmitt/action-tmate@v1        
 
 eventstore5:
-    name: "Build and Test Pull Requests"
     needs: eventstore4
+    name: "Build and Test Pull Requests"
     env:
         ASPNETCORE_ENVIRONMENT: "Production"
 
@@ -82,8 +82,8 @@ eventstore5:
       uses: mxschmitt/action-tmate@v1
       
 eventstore6:
-    name: "Build and Test Pull Requests"
     needs: eventstore5
+    name: "Build and Test Pull Requests"    
     env:
         ASPNETCORE_ENVIRONMENT: "Production"
 
