@@ -368,7 +368,7 @@
         /// <summary>
         /// Persistents the subscriptions event delivery event is delivered.
         /// </summary>
-        [Fact(Skip = ":|")]
+        [Fact]
         public async Task PersistentSubscriptions_EventDelivery_MultipleEndpoints_EventsAreDelivered()
         {
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
@@ -839,7 +839,7 @@
         /// <summary>
         /// Subscriptions the service optional parameters default persistent subscription created.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
         {
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
@@ -902,7 +902,7 @@
         /// <summary>
         /// Subscriptions the service optional parameters set persistent subscription created.
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Debug")]
         public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
         {
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
