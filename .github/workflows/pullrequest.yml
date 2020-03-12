@@ -36,7 +36,7 @@ jobs:
         dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
         dotnet test "test\SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj"        
       env:
-        ESVersion: "5.0.2"        
+        ESVersion: "5.0.6"        
         
     - name: Setup tmate session
       if: failure()
