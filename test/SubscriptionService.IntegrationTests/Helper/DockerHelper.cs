@@ -246,6 +246,12 @@
             {
                 this.DummyRESTContainer.ClearUpContainer();
             }
+
+            if (this.TestNetwork != null)
+            {
+                this.TestNetwork.Stop();
+                this.TestNetwork.Dispose();
+            }
         }
 
         /// <summary>
