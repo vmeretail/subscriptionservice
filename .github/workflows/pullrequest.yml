@@ -6,7 +6,7 @@ on:
     - master
 
 jobs:
-  build:
+  eventstore4:
     name: "Build and Test Pull Requests"
     env:
         ASPNETCORE_ENVIRONMENT: "Production"
@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        eventstoreversion: [4.0.3, 5.0.6,6.0.0-preview3.1-bionic]
+        eventstoreversion: [4.0.3]
         
     steps:
     - uses: actions/checkout@v1
@@ -42,3 +42,79 @@ jobs:
     - name: Setup tmate session
       if: failure()
       uses: mxschmitt/action-tmate@v1        
+
+eventstore5:
+    name: "Build and Test Pull Requests"
+    needs: eventstore4
+    env:
+        ASPNETCORE_ENVIRONMENT: "Production"
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        eventstoreversion: [5.0.6]
+        
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.100
+
+    - name: Restore Nuget Packages
+      run: dotnet restore SubscriptionService.sln --source https://api.nuget.org/v3/index.json
+
+    - name: Build Code
+      run: dotnet build SubscriptionService.sln --configuration Release
+   
+    - name: Run Tests
+      run: |
+        echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
+        dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
+        dotnet test "test\SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj"        
+      env:
+        ESVersion: ${{ matrix.eventstoreversion }}        
+        
+    - name: Setup tmate session
+      if: failure()
+      uses: mxschmitt/action-tmate@v1
+      
+eventstore6:
+    name: "Build and Test Pull Requests"
+    needs: eventstore5
+    env:
+        ASPNETCORE_ENVIRONMENT: "Production"
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        eventstoreversion: [6.0.0-preview3.1-bionic]
+        
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.100
+
+    - name: Restore Nuget Packages
+      run: dotnet restore SubscriptionService.sln --source https://api.nuget.org/v3/index.json
+
+    - name: Build Code
+      run: dotnet build SubscriptionService.sln --configuration Release
+   
+    - name: Run Tests
+      run: |
+        echo "ASPNETCORE_ENVIRONMENT are > ${ASPNETCORE_ENVIRONMENT}"
+        dotnet test "test\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj"
+        dotnet test "test\SubscriptionService.IntegrationTests\SubscriptionService.IntegrationTests.csproj"        
+      env:
+        ESVersion: ${{ matrix.eventstoreversion }}        
+        
+    - name: Setup tmate session
+      if: failure()
+      uses: mxschmitt/action-tmate@v1      
