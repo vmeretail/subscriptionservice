@@ -615,52 +615,87 @@
             await subscriptionService.Stop(CancellationToken.None);
         }
 
-        ///// <summary>
-        ///// Subscriptions the service custom event factory used translated events emitted.
-        ///// </summary>
-        //[Fact]
-        //public async Task SubscriptionService_CustomEventFactoryUsed_TranslatedEventsEmitted()
-        //{
-        //    // 1. Arrange
-        //    var sale1 = new
-        //                {
-        //                    AggregateId = Guid.NewGuid(),
-        //                    id = 1
-        //                };
+        /// <summary>
+        /// Subscriptions the service custom event factory used translated events emitted.
+        /// </summary>
+        [Fact]
+        public async Task SubscriptionService_CustomEventFactoryUsed_TranslatedEventsEmitted()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
 
-        //    Guid eventId = Guid.NewGuid();
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
 
-        //    List<Subscription> subscriptionList = new List<Subscription>();
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
-        //    subscriptionList.Add(Subscription.Create("$ce-SalesTransactionAggregate", "TestGroup", this.EndPointUrl));
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
 
-        //    await this.TestsFixture.PostEventToEventStore(sale1,
-        //                                                  eventId,
-        //                                                  $"{this.EventStoreHttpAddress}/SalesTransactionAggregate-{sale1.AggregateId:N}",
-        //                                                  this.EventStoreHttpClient);
+            eventStoreConnection.Connected += (sender,
+                                               args) =>
+                                              {
+                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                              };
 
-        //    // 2. Act
-        //    await this.EventStoreConnection.ConnectAsync();
+            eventStoreConnection.Closed += (sender,
+                                            args) =>
+                                           {
+                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                           };
 
-        //    SubscriptionService subscriptionService = new SubscriptionService(new TestEventFactory(), this.EventStoreConnection);
-        //    subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-        //    subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            eventStoreConnection.ErrorOccurred += (sender,
+                                                   args) =>
+                                                  {
+                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                  };
 
-        //    await subscriptionService.Start(subscriptionList, CancellationToken.None);
+            eventStoreConnection.Reconnecting += (sender,
+                                                  args) =>
+                                                 {
+                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                 };
 
-        //    // 3. Assert
-        //    String eventAsJson = await this.TestsFixture.GetEvent(this.EndPointUrl, this.ReadModelHttpClient, 1);
+            await eventStoreConnection.ConnectAsync();
 
-        //    //Verify we have our expected fields
-        //    JObject obj = JObject.Parse(eventAsJson);
+            // 1. Arrange
+            String aggregateName = "SalesTransactionAggregate";
+            Guid aggregateId = Guid.NewGuid();
+            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
+            var sale = new
+            {
+                AggregateId = aggregateId,
+                id = 1
+            };
+            Guid eventId = Guid.NewGuid();
 
-        //    obj["AggregateId"].Value<String>().ShouldBe(sale1.AggregateId.ToString());
-        //    obj["id"].Value<Int32>().ShouldBe(1);
-        //    obj["EventId"].Value<String>().ShouldBe(eventId.ToString());
+            List<Subscription> subscriptionList = new List<Subscription>();
 
-        //    // 4. Cleanup
-        //    await subscriptionService.Stop(CancellationToken.None);
-        //}
+            subscriptionList.Add(Subscription.Create("$ce-SalesTransactionAggregate", "TestGroup", this.EndPointUrl));
+
+            String eventAsString = JsonConvert.SerializeObject(sale);
+            EventData eventData = new EventData(eventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
+
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, new[] { eventData });
+
+            // 2. Act
+            SubscriptionService subscriptionService = new SubscriptionService(new TestEventFactory(), eventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+
+            await subscriptionService.Start(subscriptionList, CancellationToken.None);
+
+            // 3. Assert
+            String eventAsJson = await this.TestsFixture.GetEvent(this.EndPointUrl, this.ReadModelHttpClient, 1);
+
+            //Verify we have our expected fields
+            JObject obj = JObject.Parse(eventAsJson);
+
+            obj["AggregateId"].Value<String>().ShouldBe(sale.AggregateId.ToString());
+            obj["id"].Value<Int32>().ShouldBe(1);
+            obj["EventId"].Value<String>().ShouldBe(eventId.ToString());
+
+            // 4. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+        }
 
         ///// <summary>
         ///// Subscriptions the service multiple events posted all events delivered.
