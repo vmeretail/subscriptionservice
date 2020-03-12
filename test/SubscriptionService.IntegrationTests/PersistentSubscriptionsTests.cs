@@ -135,6 +135,8 @@
             String uri = $"{scheme}://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{subscription.StreamName}/{subscription.GroupName}/info";
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
             requestMessage.Headers.Add("Accept", @"application/json");
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
+
             HttpClient client = DockerHelper.CreateHttpClient(uri);
             HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, CancellationToken.None);
             responseMessage.IsSuccessStatusCode.ShouldBeTrue($"Response Code [{responseMessage.StatusCode} returned]");
