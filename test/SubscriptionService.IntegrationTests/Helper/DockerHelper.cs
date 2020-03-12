@@ -12,6 +12,7 @@
     using Ductus.FluentDocker.Model.Builders;
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
+    using EventStore.ClientAPI;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
     using Shouldly;
@@ -93,6 +94,8 @@
 
         #region Methods
 
+        private ManualResetEvent ManualResetEvent = new ManualResetEvent(false);
+
         /// <summary>
         /// Starts the containers for scenario run.
         /// </summary>
@@ -155,6 +158,41 @@
 
             //              infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
             //          }).Wait();
+
+            // Setup the Event Store Connection
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.EventStoreTcpPort};VerboseLogging=true;";
+            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+
+            eventStoreConnection.Connected += (sender,
+                                               args) =>
+                                              {
+                                                  this.ManualResetEvent.Set();
+                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                              };
+
+            eventStoreConnection.Closed += (sender,
+                                            args) =>
+                                           {
+                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                           };
+
+            eventStoreConnection.ErrorOccurred += (sender,
+                                                   args) =>
+                                                  {
+                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                  };
+
+            eventStoreConnection.Reconnecting += (sender,
+                                                  args) =>
+                                                 {
+                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                 };
+
+            eventStoreConnection.ConnectAsync().Wait();
+
+            this.ManualResetEvent.WaitOne(30000);
+
+            this.TestsFixture.LogMessageToTrace($"Ready to Go...");
         }
 
         /// <summary>
