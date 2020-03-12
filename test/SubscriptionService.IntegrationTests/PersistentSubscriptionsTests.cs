@@ -129,32 +129,34 @@
         /// Checks the subscription has been created.
         /// </summary>
         /// <param name="subscription">The subscription.</param>
-        //private async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
-        //{
-        //    String uri = $"http://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{subscription.StreamName}/{subscription.GroupName}/info";
-        //    HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
-        //    requestMessage.Headers.Add("Accept", @"application/json");
-        //    HttpResponseMessage responseMessage = await this.EventStoreHttpClient.SendAsync(requestMessage, CancellationToken.None);
+        private async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
+        {
+            String scheme = this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion ? "http" : "https";
+            String uri = $"{scheme}://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{subscription.StreamName}/{subscription.GroupName}/info";
+            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
+            requestMessage.Headers.Add("Accept", @"application/json");
+            HttpClient client = DockerHelper.CreateHttpClient(uri);
+            HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, CancellationToken.None);
 
-        //    var jester = new
-        //    {
-        //        groupName = String.Empty,
-        //        eventStreamId = String.Empty,
-        //        config = new
-        //        {
-        //            startFrom = 0,
-        //            maxRetryCount = 0
-        //        }
-        //    };
-        //    String responseContent = await responseMessage.Content.ReadAsStringAsync();
-        //    var subscriptionInfo = JsonConvert.DeserializeAnonymousType(responseContent, jester);
+            var jester = new
+            {
+                groupName = String.Empty,
+                eventStreamId = String.Empty,
+                config = new
+                {
+                    startFrom = 0,
+                    maxRetryCount = 0
+                }
+            };
+            String responseContent = await responseMessage.Content.ReadAsStringAsync();
+            var subscriptionInfo = JsonConvert.DeserializeAnonymousType(responseContent, jester);
 
-        //    subscriptionInfo.groupName.ShouldBe(subscription.GroupName);
-        //    subscriptionInfo.eventStreamId.ShouldBe(subscription.StreamName);
-        //    subscriptionInfo.config.ShouldNotBeNull();
-        //    subscriptionInfo.config.maxRetryCount.ShouldBe(subscription.MaxRetryCount);
-        //    subscriptionInfo.config.startFrom.ShouldBe(subscription.StreamStartPosition);
-        //}
+            subscriptionInfo.groupName.ShouldBe(subscription.GroupName);
+            subscriptionInfo.eventStreamId.ShouldBe(subscription.StreamName);
+            subscriptionInfo.config.ShouldNotBeNull();
+            subscriptionInfo.config.maxRetryCount.ShouldBe(subscription.MaxRetryCount);
+            subscriptionInfo.config.startFrom.ShouldBe(subscription.StreamStartPosition);
+        }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -834,63 +836,133 @@
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
-        ///// <summary>
-        ///// Subscriptions the service optional parameters default persistent subscription created.
-        ///// </summary>
-        //[Fact]
-        //public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
-        //{
-        //    // 1. Arrange
-        //    List<Subscription> subscriptionList = new List<Subscription>();
-        //    String streamName = "$ce-SalesTransactionAggregate";
-        //    String groupName = "TestGroup";
-        //    subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
+        /// <summary>
+        /// Subscriptions the service optional parameters default persistent subscription created.
+        /// </summary>
+        [Fact]
+        public async Task SubscriptionService_OptionalParametersDefault_PersistentSubscriptionCreated()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
 
-        //    // 2. Act
-        //    await this.EventStoreConnection.ConnectAsync();
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
 
-        //    SubscriptionService subscriptionService = new SubscriptionService(this.EventStoreConnection);
-        //    subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-        //    subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
-        //    await subscriptionService.Start(subscriptionList, CancellationToken.None);
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
 
-        //    // 3. Assert
-        //    subscriptionList.ForEach(async s => await this.CheckSubscriptionHasBeenCreated(s));
+            eventStoreConnection.Connected += (sender,
+                                               args) =>
+                                              {
+                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                              };
 
-        //    // 4. Cleanup
-        //    await subscriptionService.Stop(CancellationToken.None);
-        //}
+            eventStoreConnection.Closed += (sender,
+                                            args) =>
+                                           {
+                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                           };
 
-        ///// <summary>
-        ///// Subscriptions the service optional parameters set persistent subscription created.
-        ///// </summary>
-        //[Fact]
-        //public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
-        //{
-        //    // 1. Arrange
-        //    List<Subscription> subscriptionList = new List<Subscription>();
-        //    String streamName = "$ce-SalesTransactionAggregate";
-        //    String groupName = "TestGroup";
-        //    Int32 startFrom = 50;
-        //    Int32 maxRetryCount = 1;
-        //    subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl, maxRetryCount:maxRetryCount, streamStartPosition:startFrom));
+            eventStoreConnection.ErrorOccurred += (sender,
+                                                   args) =>
+                                                  {
+                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                  };
 
-        //    // 2. Act
-        //    await this.EventStoreConnection.ConnectAsync();
+            eventStoreConnection.Reconnecting += (sender,
+                                                  args) =>
+                                                 {
+                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                 };
 
-        //    SubscriptionService subscriptionService = new SubscriptionService(this.EventStoreConnection);
-        //    subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-        //    subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            await eventStoreConnection.ConnectAsync();
 
-        //    await subscriptionService.Start(subscriptionList, CancellationToken.None);
+            // 1. Arrange
+            List<Subscription> subscriptionList = new List<Subscription>();
+            String streamName = "$ce-SalesTransactionAggregate";
+            String groupName = "TestGroup";
+            subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
-        //    // 3. Assert
-        //    subscriptionList.ForEach(async s => await this.CheckSubscriptionHasBeenCreated(s));
+            // 2. Act
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
 
-        //    // 4. Cleanup
-        //    await subscriptionService.Stop(CancellationToken.None);
-        //}
+            await subscriptionService.Start(subscriptionList, CancellationToken.None);
+
+            // 3. Assert
+            subscriptionList.ForEach(async s => await this.CheckSubscriptionHasBeenCreated(s));
+
+            // 4. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+            eventStoreConnection.Close();
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
+        }
+
+        /// <summary>
+        /// Subscriptions the service optional parameters set persistent subscription created.
+        /// </summary>
+        [Fact]
+        public async Task SubscriptionService_OptionalParametersSet_PersistentSubscriptionCreated()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
+
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+
+            eventStoreConnection.Connected += (sender,
+                                               args) =>
+                                              {
+                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                              };
+
+            eventStoreConnection.Closed += (sender,
+                                            args) =>
+                                           {
+                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                           };
+
+            eventStoreConnection.ErrorOccurred += (sender,
+                                                   args) =>
+                                                  {
+                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                  };
+
+            eventStoreConnection.Reconnecting += (sender,
+                                                  args) =>
+                                                 {
+                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                 };
+
+            await eventStoreConnection.ConnectAsync();
+
+            // 1. Arrange
+            List<Subscription> subscriptionList = new List<Subscription>();
+            String streamName = "$ce-SalesTransactionAggregate";
+            String groupName = "TestGroup";
+            Int32 startFrom = 50;
+            Int32 maxRetryCount = 1;
+            subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl, maxRetryCount: maxRetryCount, streamStartPosition: startFrom));
+
+            // 2. Act
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+
+            await subscriptionService.Start(subscriptionList, CancellationToken.None);
+
+            // 3. Assert
+            subscriptionList.ForEach(async s => await this.CheckSubscriptionHasBeenCreated(s));
+
+            // 4. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+            eventStoreConnection.Close();
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
+        }
 
         /// <summary>
         /// Subscriptions the service error has occured.
