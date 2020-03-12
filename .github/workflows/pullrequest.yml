@@ -43,7 +43,7 @@ jobs:
       if: failure()
       uses: mxschmitt/action-tmate@v1        
 
-eventstore5:
+  eventstore5:
     needs: eventstore4
     name: "Build and Test Pull Requests"
     env:
@@ -81,7 +81,7 @@ eventstore5:
       if: failure()
       uses: mxschmitt/action-tmate@v1
       
-eventstore6:
+  eventstore6:
     needs: eventstore5
     name: "Build and Test Pull Requests"    
     env:
