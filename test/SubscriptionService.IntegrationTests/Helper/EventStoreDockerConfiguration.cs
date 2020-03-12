@@ -25,6 +25,19 @@
         /// </value>
         public String Tag { get; set; }
 
+        public String UserName { get; set; }
+
+        public String Password { get; set; }
+        public String RegistryUrl { get; set; }
+
+        public Boolean IsLegacyVersion
+        {
+            get
+            {
+                return !Tag.Contains("6.");
+            }
+        }
+
         #endregion
     }
 }

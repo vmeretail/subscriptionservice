@@ -19,6 +19,8 @@
     /// <seealso cref="System.IDisposable" />
     public class TestsFixture : IDisposable
     {
+        public EventStoreDockerConfiguration EventStoreDockerConfiguration;
+
         #region Constructors
 
         /// <summary>
