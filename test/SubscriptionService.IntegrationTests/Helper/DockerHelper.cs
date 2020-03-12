@@ -167,25 +167,25 @@
                                                args) =>
                                               {
                                                   this.ManualResetEvent.Set();
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                                  this.TestsFixture.LogMessageToTrace($"Ctor - Connected");
                                               };
 
             eventStoreConnection.Closed += (sender,
                                             args) =>
                                            {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                               this.TestsFixture.LogMessageToTrace($"Ctor - Closed");
                                            };
 
             eventStoreConnection.ErrorOccurred += (sender,
                                                    args) =>
                                                   {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                      this.TestsFixture.LogMessageToTrace($"Ctor - ErrorOccurred {args.Exception.ToString()}");
                                                   };
 
             eventStoreConnection.Reconnecting += (sender,
                                                   args) =>
                                                  {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                     this.TestsFixture.LogMessageToTrace($"Ctor - Reconnecting");
                                                  };
 
             eventStoreConnection.ConnectAsync().Wait();
@@ -193,6 +193,7 @@
             this.ManualResetEvent.WaitOne(30000);
 
             this.TestsFixture.LogMessageToTrace($"Ready to Go...");
+            eventStoreConnection.Close();
         }
 
         /// <summary>
