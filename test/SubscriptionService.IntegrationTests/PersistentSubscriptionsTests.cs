@@ -157,6 +157,8 @@
                                                args) =>
                                               {
                                                   this.TestsFixture.LogMessageToTrace($"Connected");
+
+                                                  manualResetEvent.Set();
                                               };
 
             eventStoreConnection.Closed += (sender,
@@ -181,6 +183,10 @@
 
             await eventStoreConnection.ConnectAsync();
 
+            Boolean isSignalled = manualResetEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+            isSignalled.ShouldBeTrue($"Waited and didn't get a connection.");
+
             this.TestsFixture.LogMessageToTrace($"After connect");
 
             EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes("{\"id\" : 1}"), null);
@@ -189,6 +195,8 @@
 
             this.TestsFixture.LogMessageToTrace($"TestMethod finished");
         }
+
+        ManualResetEvent manualResetEvent = new ManualResetEvent(false);
 
         /// <summary>
         /// Checks the subscription has been created.

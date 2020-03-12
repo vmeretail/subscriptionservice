@@ -132,29 +132,7 @@
             this.EventStoreHttpPort = this.EventStoreContainer.ToHostExposedEndpoint("2113/tcp").Port;
             this.DummyRESTHttpPort = this.DummyRESTContainer.ToHostExposedEndpoint("80/tcp").Port;
 
-            // Verify the Event Store is running
-            Retry.For(async () =>
-                      {
-                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/ping";
 
-                          HttpClient client = new HttpClient();
-
-                          HttpResponseMessage pingResponse = await client.GetAsync(url).ConfigureAwait(false);
-                          pingResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                      }).Wait();
-
-            Retry.For(async () =>
-                      {
-                          String url = $"http://127.0.0.1:{this.EventStoreHttpPort}/info";
-                          HttpClient client = new HttpClient();
-
-                          HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-                          requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Authorization", "Basic YWRtaW46Y2hhbmdlaXQ=");
-
-                          HttpResponseMessage infoResponse = await client.SendAsync(requestMessage, CancellationToken.None).ConfigureAwait(false);
-
-                          infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-                      }).Wait();
         }
 
         /// <summary>
