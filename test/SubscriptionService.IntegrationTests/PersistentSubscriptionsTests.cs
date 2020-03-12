@@ -273,6 +273,8 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
+            
+            eventStoreConnection.Close();
 
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
@@ -357,7 +359,7 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
-
+            eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
@@ -451,7 +453,7 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
-
+            eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
@@ -536,7 +538,7 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
-            
+            eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
@@ -648,7 +650,7 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
-
+            eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
@@ -732,7 +734,7 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
-
+            eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
@@ -828,7 +830,7 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
-
+            eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
