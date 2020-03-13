@@ -286,6 +286,7 @@
                                          CancellationToken cancellationToken)
         {
             CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            String serialisedEvent = null; //Put this out here icnase we need to log the event out for errors.
 
             try
             {
@@ -321,15 +322,13 @@
                                                                       recordedEvent.Metadata);
 
                 //Get the serialised data
-                String serialisedData = this.EventFactory.ConvertFrom(persistedEvent);
-
-                this.Logger.LogInformation($"Serialised data is {serialisedData}");
+                serialisedEvent = this.EventFactory.ConvertFrom(persistedEvent);
 
                 //Build a standard WebRequest
                 HttpRequestMessage request = new HttpRequestMessage
                                              {
                                                  Method = HttpMethod.Post,
-                                                 Content = new StringContent(serialisedData, Encoding.UTF8, "application/json"),
+                                                 Content = new StringContent(serialisedEvent, Encoding.UTF8, "application/json"),
                                                  RequestUri = subscriptionConfiguration.EndPointUri
                                              };
 
@@ -367,7 +366,9 @@
                 // Cancel the call to the server
                 linkedTokenSource.Cancel();
 
-                this.Logger.LogError(e, $"Exception has occured on EventAppeared with Event Id {resolvedEvent.Event.EventId}");
+                //TODO: Conditional whether the event is logged out (alternatively the event id)
+                //Issue https://github.com/vmeretail/subscriptionservice/issues/89 will address this.
+                this.Logger.LogError(e, $"Exception has occured on EventAppeared with Event {serialisedEvent}");
                 this.NakEvent(subscription, resolvedEvent, e);
             }
         }
