@@ -12,11 +12,14 @@
     using System.Threading.Tasks;
     using Configuration;
     using EventStore.ClientAPI;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using Shouldly;
     using Xunit;
     using Xunit.Abstractions;
+    using ILogger = EventStore.ClientAPI.ILogger;
 
     /// <summary>
     /// </summary>
@@ -56,6 +59,8 @@
 
         #endregion
 
+        private Microsoft.Extensions.Logging.ILogger Logger;
+
         #region Constructors
 
         /// <summary>
@@ -84,6 +89,8 @@
 
             this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
             this.EndPointUrl1 = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events1";
+
+            this.Logger = new LoggerFactory().CreateLogger("PersistentSubscriptionsTests");
         }
 
         #endregion
@@ -245,9 +252,7 @@
             subscriptionList.Add(Subscription.Create(streamName2, "TestGroup1", this.EndPointUrl1));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -312,9 +317,7 @@
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup", this.EndPointUrl));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -372,9 +375,7 @@
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup1", this.EndPointUrl1));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -426,9 +427,7 @@
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup", this.EndPointUrl));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -515,9 +514,7 @@
             subscriptionList2.Add(Subscription.Create(streamName2, "TestGroup", this.EndPointUrl1));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -582,9 +579,7 @@
             await eventStoreConnection.AppendToStreamAsync(streamName, -1, new[] { eventData });
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(new TestEventFactory(), eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(new TestEventFactory(), eventStoreConnection, logger:this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -652,9 +647,7 @@
             await eventStoreConnection.AppendToStreamAsync(streamName2, -1, new[] { eventData });
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -696,9 +689,7 @@
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -739,9 +730,7 @@
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl, maxRetryCount: maxRetryCount, streamStartPosition: startFrom));
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -793,11 +782,9 @@
             String streamName = "$ce-SalesTransactionAggregate";
             String groupName = "TestGroup";
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
-            
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
 
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+ 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
             foreach (Subscription subscription in subscriptionList)
@@ -836,9 +823,7 @@
             String groupNameToRemove = "TestGroup1";
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 

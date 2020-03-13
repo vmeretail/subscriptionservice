@@ -52,27 +52,10 @@
             // If there is no requirement to adjust the HTTP POST request then wiring up this event handler can be ommitted.
             subscriptionService.OnEventAppeared += Program.SubscriptionService_OnEventAppeared;
 
-            // Use this event handler to receive trace level messages from the Subscription Service, it is your responsibility to log
-            // these messages out in your own codebase if required
-            subscriptionService.TraceGenerated += Program.SubscriptionService_TraceGenerated;
-
-            // Use this event handler to receive error level messages from the Subscription Service, it is your responsibility to log
-            // these messages out in your own codebase if required
-            subscriptionService.ErrorHasOccured += Program.SubscriptionService_ErrorHasOccured;
-
             // Start the subscription service with the passed in configuration, this will create and connect to the subscriptions defined in your configuration
             await subscriptionService.Start(subscriptions, CancellationToken.None);
 
             Console.ReadKey();
-        }
-
-        /// <summary>
-        /// Subscriptions the service error has occured.
-        /// </summary>
-        /// <param name="trace">The trace.</param>
-        private static void SubscriptionService_ErrorHasOccured(String trace)
-        {
-            Console.WriteLine(trace);
         }
 
         /// <summary>
