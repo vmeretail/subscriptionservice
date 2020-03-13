@@ -782,11 +782,9 @@
             String streamName = "$ce-SalesTransactionAggregate";
             String groupName = "TestGroup";
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
-            
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
 
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+ 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
             foreach (Subscription subscription in subscriptionList)
@@ -825,9 +823,7 @@
             String groupNameToRemove = "TestGroup1";
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
-            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 

@@ -24,8 +24,6 @@
     {
         #region Fields
 
-        private readonly IEventFactory EventFactory;
-
         /// <summary>
         /// The event factory
         /// </summary>
@@ -148,7 +146,7 @@
             }
             catch(Exception e)
             {
-                this.Trace(e);
+                this.Logger.LogError(e, $"Error remvoing persistent subscription streamName {streamName} and groupName {groupName}");
                 throw;
             }
         }
