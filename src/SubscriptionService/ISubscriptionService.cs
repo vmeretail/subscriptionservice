@@ -50,6 +50,15 @@
         /// <returns></returns>
         Task Stop(CancellationToken cancellationToken);
 
+        /// <summary>
+        /// Removes the subscription.
+        /// </summary>
+        /// <param name="groupName">Name of the group.</param>
+        /// <param name="streamName">Name of the stream.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns></returns>
+        Task RemoveSubscription(String groupName, String streamName, CancellationToken cancellationToken);
+
         #endregion
     }
 

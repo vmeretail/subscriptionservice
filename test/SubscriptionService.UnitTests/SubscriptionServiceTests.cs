@@ -136,5 +136,59 @@ namespace SubscriptionService.UnitTests
             // 3. Assert
             subscriptionService.IsStarted.ShouldBeFalse();
         }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(null)]
+        public async Task SubscriptionService_RemoveSubscription_InvalidGroupName_ErrorThrown(String groupName)
+        {
+            // 1. Arrange
+            Mock<IEventStoreConnection> eventStoreConnectionMock = new Mock<IEventStoreConnection>(MockBehavior.Strict);
+            eventStoreConnectionMock.Setup(e => e.ConnectAsync()).Returns(Task.CompletedTask);
+            eventStoreConnectionMock.Setup(e => e.ConnectToPersistentSubscriptionAsync(It.IsAny<String>(),
+                                                                                       It.IsAny<String>(),
+                                                                                       It.IsAny<Func<EventStorePersistentSubscriptionBase, ResolvedEvent, int?, Task>>(),
+                                                                                       It.IsAny<Action<EventStorePersistentSubscriptionBase, SubscriptionDropReason, Exception>>(),
+                                                                                       It.IsAny<UserCredentials>(),
+                                                                                       It.IsAny<int>(),
+                                                                                       It.IsAny<Boolean>())).ReturnsAsync(default(EventStorePersistentSubscription));
+
+            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            await subscriptionService.Start(TestData.Subscriptions, CancellationToken.None);
+            String streamName = "$ce-SalesTransactionAggregate";
+
+            // 2. Act & Assert
+            Should.Throw<ArgumentNullException>(async () =>
+                                                {
+                                                    await subscriptionService.RemoveSubscription(groupName, streamName, CancellationToken.None);
+                                                });
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(null)]
+        public async Task SubscriptionService_RemoveSubscription_InvalidStreamName_ErrorThrown(String streamName)
+        {
+            // 1. Arrange
+            Mock<IEventStoreConnection> eventStoreConnectionMock = new Mock<IEventStoreConnection>(MockBehavior.Strict);
+            eventStoreConnectionMock.Setup(e => e.ConnectAsync()).Returns(Task.CompletedTask);
+            eventStoreConnectionMock.Setup(e => e.ConnectToPersistentSubscriptionAsync(It.IsAny<String>(),
+                                                                                       It.IsAny<String>(),
+                                                                                       It.IsAny<Func<EventStorePersistentSubscriptionBase, ResolvedEvent, int?, Task>>(),
+                                                                                       It.IsAny<Action<EventStorePersistentSubscriptionBase, SubscriptionDropReason, Exception>>(),
+                                                                                       It.IsAny<UserCredentials>(),
+                                                                                       It.IsAny<int>(),
+                                                                                       It.IsAny<Boolean>())).ReturnsAsync(default(EventStorePersistentSubscription));
+
+            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            await subscriptionService.Start(TestData.Subscriptions, CancellationToken.None);
+            String groupName = "TestGroup";
+
+            // 2. Act & Assert
+            Should.Throw<ArgumentNullException>(async () =>
+                                                {
+                                                    await subscriptionService.RemoveSubscription(groupName, streamName, CancellationToken.None);
+                                                });
+        }
     }
 }

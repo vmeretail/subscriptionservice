@@ -27,14 +27,16 @@
             await eventStoreConnection.ConnectAsync();
 
             List<Subscription> subscriptions = new List<Subscription>();
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", "https://enyaw1mc4if0j.x.pipedream.net/", 2, 1));
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", "https://enr3vi91wr5c.x.pipedream.net/", 2, 1));
+            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", "https://enyaw1mc4if0j.x.pipedream.net/", 2, 1));
+            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", "https://enr3vi91wr5c.x.pipedream.net/", 2, 1));
 
             ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
 
             subscriptionService.OnEventAppeared += Program.SubscriptionService_OnEventAppeared;
 
             await subscriptionService.Start(subscriptions, CancellationToken.None);
+
+            await subscriptionService.RemoveSubscription("TestGroup", "$ce-TestStream", CancellationToken.None);
 
             Console.ReadKey();
         }

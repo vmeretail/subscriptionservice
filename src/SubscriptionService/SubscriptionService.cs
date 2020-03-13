@@ -24,6 +24,8 @@
     {
         #region Fields
 
+        private readonly IEventFactory EventFactory;
+
         /// <summary>
         /// The event factory
         /// </summary>
@@ -132,6 +134,24 @@
         #endregion
 
         #region Methods
+
+        public async Task RemoveSubscription(String groupName,
+                                             String streamName,
+                                             CancellationToken cancellationToken)
+        {
+            this.GuardAgainstInvalidGroupName(groupName);
+            this.GuardAgainstInvalidStreamName(streamName);
+
+            try
+            {
+                await this.EventStoreConnection.DeletePersistentSubscriptionAsync(streamName, groupName);
+            }
+            catch(Exception e)
+            {
+                this.Trace(e);
+                throw;
+            }
+        }
 
         /// <summary>
         /// Start with no config
@@ -362,6 +382,32 @@
         {
             //All standard settings in here. We might put configuration in here.
             return PersistentSubscriptionSettings.Create().ResolveLinkTos().WithMaxRetriesOf(10).WithMessageTimeoutOf(TimeSpan.FromSeconds(10));
+        }
+
+        /// <summary>
+        /// Guards the name of the against invalid group.
+        /// </summary>
+        /// <param name="groupName">Name of the group.</param>
+        /// <exception cref="ArgumentNullException">groupName</exception>
+        private void GuardAgainstInvalidGroupName(String groupName)
+        {
+            if (string.IsNullOrEmpty(groupName))
+            {
+                throw new ArgumentNullException(nameof(groupName));
+            }
+        }
+
+        /// <summary>
+        /// Guards the name of the against invalid stream.
+        /// </summary>
+        /// <param name="streamName">Name of the stream.</param>
+        /// <exception cref="ArgumentNullException">streamName</exception>
+        private void GuardAgainstInvalidStreamName(String streamName)
+        {
+            if (string.IsNullOrEmpty(streamName))
+            {
+                throw new ArgumentNullException(nameof(streamName));
+            }
         }
 
         /// <summary>
