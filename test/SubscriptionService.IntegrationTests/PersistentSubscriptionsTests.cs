@@ -13,13 +13,12 @@
     using Configuration;
     using EventStore.ClientAPI;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Logging.Abstractions;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using Shouldly;
     using Xunit;
     using Xunit.Abstractions;
-    using ILogger = EventStore.ClientAPI.ILogger;
+    using ILogger = Microsoft.Extensions.Logging.ILogger;
 
     /// <summary>
     /// </summary>
@@ -47,6 +46,8 @@
         /// </summary>
         private readonly String EndPointUrl1;
 
+        private readonly ILogger Logger;
+
         /// <summary>
         /// The test name
         /// </summary>
@@ -58,8 +59,6 @@
         private readonly TestsFixture TestsFixture;
 
         #endregion
-
-        private Microsoft.Extensions.Logging.ILogger Logger;
 
         #region Constructors
 
@@ -84,7 +83,7 @@
 
             // Start the Event Store & Dummy API
             this.DockerHelper.StartContainersForScenarioRun(this.TestName);
-            
+
             this.ReadModelHttpClient = this.TestsFixture.GetHttpClient();
 
             this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
@@ -97,29 +96,7 @@
 
         #region Properties
 
-        /// <summary>
-        /// The event store connection
-        /// </summary>
-        /// <value>
-        /// The event store connection.
-        /// </value>
-        //public IEventStoreConnection EventStoreConnection { get; }
 
-        /// <summary>
-        /// The event store HTTP address
-        /// </summary>
-        /// <value>
-        /// The event store HTTP address.
-        /// </value>
-        //public String EventStoreHttpAddress { get; }
-
-        /// <summary>
-        /// The event store HTTP client
-        /// </summary>
-        /// <value>
-        /// The event store HTTP client.
-        /// </value>
-        //public HttpClient EventStoreHttpClient { get; }
 
         /// <summary>
         /// The read model HTTP client
@@ -132,59 +109,6 @@
         #endregion
 
         #region Methods
-
-        /// <summary>
-        /// Checks the subscription has been created.
-        /// </summary>
-        /// <param name="subscription">The subscription.</param>
-        private async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
-        {
-            String scheme = this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion ? "http" : "https";
-            String uri = $"{scheme}://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{subscription.StreamName}/{subscription.GroupName}/info";
-            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
-            requestMessage.Headers.Add("Accept", @"application/json");
-            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-
-            HttpClient client = DockerHelper.CreateHttpClient(uri);
-            HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, CancellationToken.None);
-            responseMessage.IsSuccessStatusCode.ShouldBeTrue($"Response Code [{responseMessage.StatusCode} returned]");
-            var jester = new
-            {
-                groupName = String.Empty,
-                eventStreamId = String.Empty,
-                config = new
-                {
-                    startFrom = 0,
-                    maxRetryCount = 0
-                }
-            };
-            String responseContent = await responseMessage.Content.ReadAsStringAsync();
-            responseContent.ShouldNotBeNullOrEmpty();
-
-            this.TestsFixture.LogMessageToTrace($"Response Content is [{responseContent}]");
-
-            var subscriptionInfo = JsonConvert.DeserializeAnonymousType(responseContent, jester);
-
-            subscriptionInfo.groupName.ShouldBe(subscription.GroupName);
-            subscriptionInfo.eventStreamId.ShouldBe(subscription.StreamName);
-            subscriptionInfo.config.ShouldNotBeNull();
-            subscriptionInfo.config.maxRetryCount.ShouldBe(subscription.MaxRetryCount);
-            subscriptionInfo.config.startFrom.ShouldBe(subscription.StreamStartPosition);
-        }
-
-        private async Task CheckSubscriptionHasBeenDeleted(String streamName, String groupName)
-        {
-            String scheme = this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion ? "http" : "https";
-            String uri = $"{scheme}://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{streamName}/{groupName}/info";
-            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
-            requestMessage.Headers.Add("Accept", @"application/json");
-            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
-
-            HttpClient client = DockerHelper.CreateHttpClient(uri);
-            HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, CancellationToken.None);
-            responseMessage.IsSuccessStatusCode.ShouldBeFalse($"Response Code [{responseMessage.StatusCode} returned]");
-            responseMessage.StatusCode.ShouldBe(HttpStatusCode.NotFound);
-        }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -225,26 +149,26 @@
 
             // Setup some dummy events in the Event Store
             var sale1 = new
-            {
-                AggregateId = aggregateId1,
-                EventId = Guid.NewGuid()
-            };
+                        {
+                            AggregateId = aggregateId1,
+                            EventId = Guid.NewGuid()
+                        };
 
             var sale2 = new
-            {
-                AggregateId = aggregateId2,
-                EventId = Guid.NewGuid()
-            };
+                        {
+                            AggregateId = aggregateId2,
+                            EventId = Guid.NewGuid()
+                        };
 
             String eventAsString = JsonConvert.SerializeObject(sale1);
             EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName1, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName1, -1, eventData);
 
             eventAsString = JsonConvert.SerializeObject(sale2);
             eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName2, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName2, -1, eventData);
 
             // Setup a subscription configuration to deliver the events to the dummy REST
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -275,7 +199,7 @@
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
-            
+
             eventStoreConnection.Close();
 
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
@@ -310,14 +234,14 @@
             String eventAsString = JsonConvert.SerializeObject(sale);
             EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, eventData);
 
             // Setup a subscription configuration to deliver the events to the dummy REST
             List<Subscription> subscriptionList = new List<Subscription>();
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup", this.EndPointUrl));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -359,15 +283,15 @@
 
             // Setup some dummy events in the Event Store
             var sale = new
-            {
-                AggregateId = aggregateId,
-                EventId = Guid.NewGuid()
-            };
+                       {
+                           AggregateId = aggregateId,
+                           EventId = Guid.NewGuid()
+                       };
 
             String eventAsString = JsonConvert.SerializeObject(sale);
             EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, eventData);
 
             // Setup a subscription configuration to deliver the events to the dummy REST
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -375,7 +299,7 @@
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup1", this.EndPointUrl1));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -421,13 +345,13 @@
             String aggregateName = "SalesTransactionAggregate";
             Guid aggregateId = Guid.NewGuid();
             String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
-            
+
             // Setup a subscription configuration to deliver the events to the dummy REST
             List<Subscription> subscriptionList = new List<Subscription>();
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup", this.EndPointUrl));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -435,15 +359,15 @@
 
             // Setup some dummy events in the Event Store
             var sale = new
-            {
-                AggregateId = aggregateId,
-                EventId = Guid.NewGuid()
-            };
+                       {
+                           AggregateId = aggregateId,
+                           EventId = Guid.NewGuid()
+                       };
 
             String eventAsString = JsonConvert.SerializeObject(sale);
             EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, eventData);
 
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
@@ -485,26 +409,26 @@
 
             // Setup some dummy events in the Event Store
             var sale1 = new
-            {
-                AggregateId = aggregateId1,
-                EventId = Guid.NewGuid()
-            };
+                        {
+                            AggregateId = aggregateId1,
+                            EventId = Guid.NewGuid()
+                        };
 
             var sale2 = new
-            {
-                AggregateId = aggregateId2,
-                EventId = Guid.NewGuid()
-            };
+                        {
+                            AggregateId = aggregateId2,
+                            EventId = Guid.NewGuid()
+                        };
 
             String eventAsString = JsonConvert.SerializeObject(sale1);
             EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName1, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName1, -1, eventData);
 
             eventAsString = JsonConvert.SerializeObject(sale2);
             eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName2, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName2, -1, eventData);
 
             // Setup a subscription configuration to deliver the events to the dummy REST
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -514,7 +438,7 @@
             subscriptionList2.Add(Subscription.Create(streamName2, "TestGroup", this.EndPointUrl1));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             // 2. Act
             // Start the subscription service
@@ -563,10 +487,10 @@
             Guid aggregateId = Guid.NewGuid();
             String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
             var sale = new
-            {
-                AggregateId = aggregateId,
-                id = 1
-            };
+                       {
+                           AggregateId = aggregateId,
+                           id = 1
+                       };
             Guid eventId = Guid.NewGuid();
 
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -576,7 +500,7 @@
             String eventAsString = JsonConvert.SerializeObject(sale);
             EventData eventData = new EventData(eventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, eventData);
 
             // 2. Act
             SubscriptionService subscriptionService = new SubscriptionService(new TestEventFactory(), eventStoreConnection, logger:this.Logger);
@@ -619,18 +543,18 @@
             Guid aggregateId1 = Guid.NewGuid();
             String streamName1 = $"{aggregateName}-{aggregateId1.ToString("N")}";
             var sale1 = new
-            {
-                AggregateId = aggregateId1,
-                EventId = Guid.NewGuid()
-            };
+                        {
+                            AggregateId = aggregateId1,
+                            EventId = Guid.NewGuid()
+                        };
 
             Guid aggregateId2 = Guid.NewGuid();
             String streamName2 = $"{aggregateName}-{aggregateId2.ToString("N")}";
             var sale2 = new
-            {
-                AggregateId = Guid.NewGuid(),
-                EventId = Guid.NewGuid()
-            };
+                        {
+                            AggregateId = Guid.NewGuid(),
+                            EventId = Guid.NewGuid()
+                        };
 
             List<Subscription> subscriptionList = new List<Subscription>();
 
@@ -639,12 +563,12 @@
             String eventAsString = JsonConvert.SerializeObject(sale1);
             EventData eventData = new EventData(sale1.EventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName1, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName1, -1, eventData);
 
             eventAsString = JsonConvert.SerializeObject(sale2);
             eventData = new EventData(sale2.EventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-            await eventStoreConnection.AppendToStreamAsync(streamName2, -1, new[] { eventData });
+            await eventStoreConnection.AppendToStreamAsync(streamName2, -1, eventData);
 
             // 2. Act
             SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
@@ -689,7 +613,7 @@
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -727,10 +651,10 @@
             String groupName = "TestGroup";
             Int32 startFrom = 50;
             Int32 maxRetryCount = 1;
-            subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl, maxRetryCount: maxRetryCount, streamStartPosition: startFrom));
+            subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl, maxRetryCount:maxRetryCount, streamStartPosition:startFrom));
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -745,24 +669,6 @@
             await subscriptionService.Stop(CancellationToken.None);
             eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
-        }
-
-        /// <summary>
-        /// Subscriptions the service error has occured.
-        /// </summary>
-        /// <param name="trace">The trace.</param>
-        private void SubscriptionService_ErrorHasOccured(String trace)
-        {
-            this.TestsFixture.LogMessageToTrace(trace);
-        }
-
-        /// <summary>
-        /// Subscriptions the service trace generated.
-        /// </summary>
-        /// <param name="trace">The trace.</param>
-        private void SubscriptionService_TraceGenerated(String trace)
-        {
-            this.TestsFixture.LogMessageToTrace(trace);
         }
 
         [Fact]
@@ -784,7 +690,7 @@
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
             SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
- 
+
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
             foreach (Subscription subscription in subscriptionList)
@@ -796,7 +702,7 @@
             await subscriptionService.RemoveSubscription(groupName, streamName, CancellationToken.None);
 
             // 3. Assert
-            await this.CheckSubscriptionHasBeenDeleted(groupName,streamName);
+            await this.CheckSubscriptionHasBeenDeleted(groupName, streamName);
 
             // 4. Cleanup
             await subscriptionService.Stop(CancellationToken.None);
@@ -823,7 +729,7 @@
             String groupNameToRemove = "TestGroup1";
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger: this.Logger);
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -841,36 +747,108 @@
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
+        /// <summary>
+        /// Checks the subscription has been created.
+        /// </summary>
+        /// <param name="subscription">The subscription.</param>
+        private async Task CheckSubscriptionHasBeenCreated(Subscription subscription)
+        {
+            String scheme = this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion ? "http" : "https";
+            String uri = $"{scheme}://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{subscription.StreamName}/{subscription.GroupName}/info";
+            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
+            requestMessage.Headers.Add("Accept", @"application/json");
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
+
+            HttpClient client = DockerHelper.CreateHttpClient(uri);
+            HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, CancellationToken.None);
+            responseMessage.IsSuccessStatusCode.ShouldBeTrue($"Response Code [{responseMessage.StatusCode} returned]");
+            var jester = new
+                         {
+                             groupName = String.Empty,
+                             eventStreamId = String.Empty,
+                             config = new
+                                      {
+                                          startFrom = 0,
+                                          maxRetryCount = 0
+                                      }
+                         };
+            String responseContent = await responseMessage.Content.ReadAsStringAsync();
+            responseContent.ShouldNotBeNullOrEmpty();
+
+            this.TestsFixture.LogMessageToTrace($"Response Content is [{responseContent}]");
+
+            var subscriptionInfo = JsonConvert.DeserializeAnonymousType(responseContent, jester);
+
+            subscriptionInfo.groupName.ShouldBe(subscription.GroupName);
+            subscriptionInfo.eventStreamId.ShouldBe(subscription.StreamName);
+            subscriptionInfo.config.ShouldNotBeNull();
+            subscriptionInfo.config.maxRetryCount.ShouldBe(subscription.MaxRetryCount);
+            subscriptionInfo.config.startFrom.ShouldBe(subscription.StreamStartPosition);
+        }
+
+        private async Task CheckSubscriptionHasBeenDeleted(String streamName,
+                                                           String groupName)
+        {
+            String scheme = this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion ? "http" : "https";
+            String uri = $"{scheme}://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{streamName}/{groupName}/info";
+            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
+            requestMessage.Headers.Add("Accept", @"application/json");
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
+
+            HttpClient client = DockerHelper.CreateHttpClient(uri);
+            HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, CancellationToken.None);
+            responseMessage.IsSuccessStatusCode.ShouldBeFalse($"Response Code [{responseMessage.StatusCode} returned]");
+            responseMessage.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        }
+
         private async Task<IEventStoreConnection> SetupEventStoreConnection(String connectionString)
         {
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+            IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
 
             eventStoreConnection.Connected += (sender,
                                                args) =>
                                               {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                                  this.TestsFixture.LogMessageToTrace("Connected");
                                               };
 
             eventStoreConnection.Closed += (sender,
                                             args) =>
                                            {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                               this.TestsFixture.LogMessageToTrace("Closed");
                                            };
 
             eventStoreConnection.ErrorOccurred += (sender,
                                                    args) =>
                                                   {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception}");
                                                   };
 
             eventStoreConnection.Reconnecting += (sender,
                                                   args) =>
                                                  {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                     this.TestsFixture.LogMessageToTrace("Reconnecting");
                                                  };
 
             await eventStoreConnection.ConnectAsync();
             return eventStoreConnection;
+        }
+
+        /// <summary>
+        /// Subscriptions the service error has occured.
+        /// </summary>
+        /// <param name="trace">The trace.</param>
+        private void SubscriptionService_ErrorHasOccured(String trace)
+        {
+            this.TestsFixture.LogMessageToTrace(trace);
+        }
+
+        /// <summary>
+        /// Subscriptions the service trace generated.
+        /// </summary>
+        /// <param name="trace">The trace.</param>
+        private void SubscriptionService_TraceGenerated(String trace)
+        {
+            this.TestsFixture.LogMessageToTrace(trace);
         }
 
         #endregion
