@@ -68,14 +68,6 @@ namespace Core3WorkerServiceExample
             // If there is no requirement to adjust the HTTP POST request then wiring up this event handler can be ommitted.
             this.SubscriptionService.OnEventAppeared += this.SubscriptionService_OnEventAppeared;
 
-            // Use this event handler to receive trace level messages from the Subscription Service, it is your responsibility to log
-            // these messages out in your own codebase if required
-            this.SubscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
-
-            // Use this event handler to receive error level messages from the Subscription Service, it is your responsibility to log
-            // these messages out in your own codebase if required
-            this.SubscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
-
             await base.StartAsync(cancellationToken);
         }
 

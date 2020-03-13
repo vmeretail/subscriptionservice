@@ -34,9 +34,6 @@
 
             subscriptionService.OnEventAppeared += Program.SubscriptionService_OnEventAppeared;
 
-            subscriptionService.TraceGenerated += Program.SubscriptionService_TraceGenerated;
-            subscriptionService.ErrorHasOccured += Program.SubscriptionService_ErrorHasOccured;
-
             await subscriptionService.Start(subscriptions, CancellationToken.None);
 
             Console.ReadKey();

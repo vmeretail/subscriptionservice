@@ -5,6 +5,7 @@
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
+    using Configuration;
 
     /// <summary>
     /// </summary>
@@ -24,17 +25,10 @@
 
         #region Events
 
-        event TraceHandler ErrorHasOccured;
-
         /// <summary>
         /// Occurs when [on event appeared].
         /// </summary>
         event EventHandler<HttpRequestMessage> OnEventAppeared;
-
-        /// <summary>
-        /// Occurs when [trace generated].
-        /// </summary>
-        event TraceHandler TraceGenerated;
 
         #endregion
 
@@ -46,7 +40,8 @@
         /// <param name="subscriptions">The subscriptions.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns></returns>
-        Task Start(List<Configuration.Subscription> subscriptions, CancellationToken cancellationToken);
+        Task Start(List<Subscription> subscriptions,
+                   CancellationToken cancellationToken);
 
         /// <summary>
         /// Stop the service

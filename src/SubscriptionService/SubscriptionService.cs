@@ -2,32 +2,42 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Dynamic;
     using System.Linq;
     using System.Net.Http;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-    using Domain;
+    using Configuration;
     using EventStore.ClientAPI;
     using EventStore.ClientAPI.SystemData;
     using Factories;
-    using Newtonsoft.Json;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
+    using ILogger = Microsoft.Extensions.Logging.ILogger;
 
     /// <summary>
     /// </summary>
+    /// <seealso cref="SubscriptionService.ISubscriptionService" />
     /// <seealso cref="ISubscriptionService" />
     /// <seealso cref="ISubscriptionService" />
     public class SubscriptionService : ISubscriptionService
     {
-        private readonly IEventFactory EventFactory;
-
         #region Fields
+
+        /// <summary>
+        /// The event factory
+        /// </summary>
+        private readonly IEventFactory EventFactory;
 
         /// <summary>
         /// The event store connection
         /// </summary>
         private readonly IEventStoreConnection EventStoreConnection;
+
+        /// <summary>
+        /// The logger
+        /// </summary>
+        private readonly ILogger Logger;
 
         #endregion
 
@@ -39,22 +49,33 @@
         /// <param name="eventStoreConnection">The event store connection.</param>
         /// <param name="username">The username.</param>
         /// <param name="password">The password.</param>
+        /// <param name="logger">The logger.</param>
         /// <exception cref="ArgumentNullException">Value cannot be null - eventStoreConnection</exception>
         public SubscriptionService(IEventStoreConnection eventStoreConnection,
                                    String username = "admin",
-                                   String password = "changeit") : this(Factories.EventFactory.Create(), eventStoreConnection,username,password)
+                                   String password = "changeit",
+                                   ILogger logger = null) : this(Factories.EventFactory.Create(), eventStoreConnection, username, password, logger)
         {
-            
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SubscriptionService" /> class.
+        /// </summary>
+        /// <param name="eventFactory">The event factory.</param>
+        /// <param name="eventStoreConnection">The event store connection.</param>
+        /// <param name="username">The username.</param>
+        /// <param name="password">The password.</param>
+        /// <param name="logger">The logger.</param>
+        /// <exception cref="ArgumentNullException">eventStoreConnection - value cannot be null</exception>
         public SubscriptionService(IEventFactory eventFactory,
                                    IEventStoreConnection eventStoreConnection,
                                    String username = "admin",
-                                   String password = "changeit")
+                                   String password = "changeit",
+                                   ILogger logger = null)
         {
-
             if (eventStoreConnection == null)
             {
-                throw new ArgumentNullException("Value cannot be null", nameof(eventStoreConnection));
+                throw new ArgumentNullException(nameof(eventStoreConnection), "value cannot be null");
             }
 
             if (eventFactory == null)
@@ -66,6 +87,14 @@
             this.EventFactory = eventFactory;
 
             this.EventStoreConnection = eventStoreConnection;
+
+            if (logger == null)
+            {
+                //This will save us null checking each log message
+                logger = NullLogger.Instance;
+            }
+
+            this.Logger = logger;
 
             // Cache the user credentials
             this.DefaultUserCredentials = new UserCredentials(username, password);
@@ -100,13 +129,6 @@
         /// </summary>
         public event EventHandler<HttpRequestMessage> OnEventAppeared;
 
-        /// <summary>
-        /// Occurs when trace is generated.
-        /// </summary>
-        public event TraceHandler TraceGenerated;
-
-        public event TraceHandler ErrorHasOccured;
-
         #endregion
 
         #region Methods
@@ -116,21 +138,23 @@
         /// </summary>
         /// <param name="subscriptions">The subscriptions.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        public async Task Start(List<Configuration.Subscription> subscriptions, CancellationToken cancellationToken)
+        /// <exception cref="ArgumentNullException">subscriptions - Value cannot be null or empty</exception>
+        public async Task Start(List<Subscription> subscriptions,
+                                CancellationToken cancellationToken)
         {
             if (subscriptions == null || subscriptions.Any() == false)
             {
-                throw new ArgumentNullException("Value cannot be null or empty", nameof(subscriptions));
+                throw new ArgumentNullException(nameof(subscriptions), "Value cannot be null or empty");
             }
 
             //Convert the Subscriptions to our internal model
             SubscriptionFactory subscriptionFactory = new SubscriptionFactory();
 
-            List<Subscription> subscriptionsList = new List<Subscription>();
+            List<Domain.Subscription> subscriptionsList = new List<Domain.Subscription>();
 
             subscriptions.ForEach(s => subscriptionsList.Add(subscriptionFactory.CreateFrom(s)));
 
-            foreach (Subscription subscription in subscriptionsList)
+            foreach (Domain.Subscription subscription in subscriptionsList)
             {
                 await this.ConnectToSubscription(subscription, cancellationToken);
             }
@@ -155,7 +179,7 @@
         /// </summary>
         /// <param name="subscription">The subscription.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        private async Task ConnectToSubscription(Subscription subscription,
+        private async Task ConnectToSubscription(Domain.Subscription subscription,
                                                  CancellationToken cancellationToken)
         {
             Action<EventStorePersistentSubscriptionBase, ResolvedEvent> eventAppearedAction = async (eventStorePersistentSubscriptionBase,
@@ -181,14 +205,13 @@
             async Task ConnectToPersistentSubscriptionAsync()
             {
                 await this.EventStoreConnection.ConnectToPersistentSubscriptionAsync(subscription.StreamName,
-                                                                                                                                   subscription.GroupName,
-                                                                                                                                   eventAppearedAction,
-                                                                                                                                   subscriptionDroppedAction,
-                                                                                                                                   null,
-                                                                                                                                   subscription.NumberOfConcurrentMessages,
-                                                                                                                                   false);
+                                                                                     subscription.GroupName,
+                                                                                     eventAppearedAction,
+                                                                                     subscriptionDroppedAction,
+                                                                                     null,
+                                                                                     subscription.NumberOfConcurrentMessages,
+                                                                                     false);
             }
-
 
             try
             {
@@ -215,7 +238,7 @@
         /// </summary>
         /// <param name="subscription">The subscription.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        private async Task CreatePersistentSubscriptionFromBeginningAsync(Subscription subscription,
+        private async Task CreatePersistentSubscriptionFromBeginningAsync(Domain.Subscription subscription,
                                                                           CancellationToken cancellationToken)
         {
             PersistentSubscriptionSettingsBuilder settings = this.GetDefaultPersistentSubscriptionSettingsBuilder().WithMaxRetriesOf(subscription.MaxRetryCount);
@@ -227,7 +250,6 @@
             {
                 settings.StartFrom(subscription.StreamStartPosition);
             }
-            
 
             await this.EventStoreConnection.CreatePersistentSubscriptionAsync(subscription.StreamName, subscription.GroupName, settings, this.DefaultUserCredentials);
         }
@@ -242,7 +264,7 @@
         /// <exception cref="Exception">Response from server was {response}</exception>
         private async Task EventAppeared(EventStorePersistentSubscriptionBase subscription,
                                          ResolvedEvent resolvedEvent,
-                                         Subscription subscriptionConfiguration,
+                                         Domain.Subscription subscriptionConfiguration,
                                          CancellationToken cancellationToken)
         {
             CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -264,7 +286,7 @@
                     return;
                 }
 
-                this.Trace($"Event Id {resolvedEvent.Event.EventId} - EventAppearedFromPersistentSubscription");
+                this.Logger.LogInformation($"Event Id {resolvedEvent.Event.EventId} - EventAppearedFromPersistentSubscription");
 
                 RecordedEvent recordedEvent = resolvedEvent.Event;
 
@@ -280,12 +302,10 @@
                                                                       recordedEvent.IsJson,
                                                                       recordedEvent.Metadata);
 
-
-
                 //Get the serialised data
                 String serialisedData = this.EventFactory.ConvertFrom(persistedEvent);
 
-                this.Trace($"Serialised data is {serialisedData}");
+                this.Logger.LogInformation($"Serialised data is {serialisedData}");
 
                 //Build a standard WebRequest
                 HttpRequestMessage request = new HttpRequestMessage
@@ -297,14 +317,14 @@
 
                 if (this.OnEventAppeared != null)
                 {
-                    this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using custom Event Appeared");
+                    this.Logger.LogInformation($"Event Id {resolvedEvent.Event.EventId} - Using custom Event Appeared");
 
                     //Let the caller make some changes to the HttpRequestMessage
                     this.OnEventAppeared(this, request);
                 }
                 else
                 {
-                    this.Trace($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
+                    this.Logger.LogInformation($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
                 }
 
                 HttpClient httpClient = subscriptionConfiguration.HttpClient;
@@ -320,17 +340,16 @@
                     throw new Exception($"Event Id {resolvedEvent.Event.EventId} - Response from server was {response}");
                 }
 
-                this.Trace($"Event Id {resolvedEvent.Event.EventId} - Event POST successful");
+                this.Logger.LogInformation($"Event Id {resolvedEvent.Event.EventId} - Event POST successful");
 
                 subscription.Acknowledge(resolvedEvent);
-
             }
             catch(Exception e)
             {
                 // Cancel the call to the server
                 linkedTokenSource.Cancel();
 
-                this.Trace(e);
+                this.Logger.LogError(e, $"Exception has occured on EventAppeared with Event Id {resolvedEvent.Event.EventId}");
                 this.NakEvent(subscription, resolvedEvent, e);
             }
         }
@@ -361,7 +380,7 @@
             }
             catch(Exception ex)
             {
-                this.Trace(ex);
+                this.Logger.LogError(ex, $"Exception has occured when NAKing event id {resolvedEvent.Event.EventId}");
             }
         }
 
@@ -379,32 +398,6 @@
                                          CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Traces the specified trace.
-        /// </summary>
-        /// <param name="trace">The trace.</param>
-        private void Trace(String trace)
-        {
-            this.TraceGenerated?.Invoke(trace);
-        }
-
-        /// <summary>
-        /// Traces the specified exception.
-        /// </summary>
-        /// <param name="exception">The exception.</param>
-        private void Trace(Exception exception)
-        {
-            if (this.ErrorHasOccured != null)
-            {
-                this.ErrorHasOccured(exception.Message);
-
-                if (exception.InnerException != null)
-                {
-                    this.Trace(exception.InnerException);
-                }
-            }
         }
 
         #endregion
