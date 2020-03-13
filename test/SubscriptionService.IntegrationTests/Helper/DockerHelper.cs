@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Net;
     using System.Net.Http;
@@ -15,6 +16,9 @@
     using Ductus.FluentDocker.Model.Builders;
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
+    using EventStore.ClientAPI.Common.Log;
+    using EventStore.ClientAPI.Projections;
+    using EventStore.ClientAPI.SystemData;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
     using Shouldly;
@@ -230,6 +234,22 @@
 
                           infoResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
                       }).Wait();
+
+            // Load the event debug projection to the Event Store
+            try
+            {
+                IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), this.EventStoreHttpPort);
+                String projectionString = "fromAll()\r\n.when({\r\n$any: function(s, e){\r\nlog(JSON.stringify(e));\r\n}\r\n})";
+                ProjectionsManager debugProjectionManager = new ProjectionsManager(new ConsoleLogger(), endPoint, TimeSpan.FromSeconds(30));
+                this.TestsFixture.LogMessageToTrace($"Creating projection [{"EventDebugging"}]");
+                debugProjectionManager.CreateContinuousAsync("Debugging", projectionString, new UserCredentials("admin", "changeit")).Wait();
+            }
+            catch (Exception e)
+            {
+                this.TestsFixture.LogMessageToTrace($"Projection [{"EventDebugging"}] error [{e}]");
+            }
+
+            this.TestsFixture.LogMessageToTrace($"Projection [{"EventDebugging"}] Loaded Successfully");
         }
 
         /// <summary>
