@@ -44,8 +44,8 @@
             List<Subscription> subscriptions = new List<Subscription>();
             subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages:2, maxRetryCount:1));
 
-            // Create instance of the class
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
+            // Create instance of the class via the SubscriptionServiceBuilder
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder().UseConnection(eventStoreConnection).Build();
 
             // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 
             // adding a Authorization token onto the HTTP POST (as demonstrated below)

@@ -12,14 +12,8 @@
     using EventStore.ClientAPI.SystemData;
     using Factories;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Logging.Abstractions;
     using ILogger = Microsoft.Extensions.Logging.ILogger;
 
-    /// <summary>
-    /// </summary>
-    /// <seealso cref="SubscriptionService.ISubscriptionService" />
-    /// <seealso cref="ISubscriptionService" />
-    /// <seealso cref="ISubscriptionService" />
     public class SubscriptionService : ISubscriptionService
     {
         #region Fields
@@ -46,59 +40,35 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="SubscriptionService" /> class.
         /// </summary>
-        /// <param name="eventStoreConnection">The event store connection.</param>
-        /// <param name="username">The username.</param>
-        /// <param name="password">The password.</param>
-        /// <param name="logger">The logger.</param>
-        /// <exception cref="ArgumentNullException">Value cannot be null - eventStoreConnection</exception>
-        public SubscriptionService(IEventStoreConnection eventStoreConnection,
-                                   String username = "admin",
-                                   String password = "changeit",
-                                   ILogger logger = null) : this(Factories.EventFactory.Create(), eventStoreConnection, username, password, logger)
+        /// <param name="subscriptionServiceBuilder">The subscription service builder.</param>
+        /// <exception cref="NullReferenceException">
+        /// SubscriptionServiceBuilder cannot be null
+        /// or
+        /// EventStoreConnection cannot be null
+        /// </exception>
+        internal SubscriptionService(SubscriptionServiceBuilder subscriptionServiceBuilder)
         {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SubscriptionService" /> class.
-        /// </summary>
-        /// <param name="eventFactory">The event factory.</param>
-        /// <param name="eventStoreConnection">The event store connection.</param>
-        /// <param name="username">The username.</param>
-        /// <param name="password">The password.</param>
-        /// <param name="logger">The logger.</param>
-        /// <exception cref="ArgumentNullException">eventStoreConnection - value cannot be null</exception>
-        public SubscriptionService(IEventFactory eventFactory,
-                                   IEventStoreConnection eventStoreConnection,
-                                   String username = "admin",
-                                   String password = "changeit",
-                                   ILogger logger = null)
-        {
-            if (eventStoreConnection == null)
+            if (subscriptionServiceBuilder == null)
             {
-                throw new ArgumentNullException(nameof(eventStoreConnection), "value cannot be null");
+                throw new NullReferenceException("SubscriptionServiceBuilder cannot be null");
             }
 
-            if (eventFactory == null)
+            if (subscriptionServiceBuilder.EventStoreConnection == null)
             {
-                //Create a default factory
-                eventFactory = Factories.EventFactory.Create();
+                throw new NullReferenceException("EventStoreConnection cannot be null");
             }
 
-            this.EventFactory = eventFactory;
-
-            this.EventStoreConnection = eventStoreConnection;
-
-            if (logger == null)
-            {
-                //This will save us null checking each log message
-                logger = NullLogger.Instance;
-            }
-
-            this.Logger = logger;
+            this.EventFactory = subscriptionServiceBuilder.EventFactory;
+            this.EventStoreConnection = subscriptionServiceBuilder.EventStoreConnection;
+            this.Logger = subscriptionServiceBuilder.Logger;
 
             // Cache the user credentials
-            this.DefaultUserCredentials = new UserCredentials(username, password);
+            this.DefaultUserCredentials = new UserCredentials(subscriptionServiceBuilder.Username, subscriptionServiceBuilder.Password);
+
+            this.LogEventsSettings = subscriptionServiceBuilder.LogEventsSettings;
         }
+
+        private readonly SubscriptionServiceBuilder.LogEvents LogEventsSettings;
 
         #endregion
 
@@ -133,6 +103,12 @@
 
         #region Methods
 
+        /// <summary>
+        /// Removes the subscription.
+        /// </summary>
+        /// <param name="groupName">Name of the group.</param>
+        /// <param name="streamName">Name of the stream.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
         public async Task RemoveSubscription(String groupName,
                                              String streamName,
                                              CancellationToken cancellationToken)
@@ -191,6 +167,7 @@
             this.IsStarted = false;
             return Task.CompletedTask;
         }
+
 
         /// <summary>
         /// Connects to subscription.
@@ -324,6 +301,11 @@
                 //Get the serialised data
                 serialisedEvent = this.EventFactory.ConvertFrom(persistedEvent);
 
+                if(this.LogEventsSettings.HasFlag(SubscriptionServiceBuilder.LogEvents.All))
+                {
+                    this.Logger.LogInformation($"Serialised data is {serialisedEvent}");
+                }
+
                 //Build a standard WebRequest
                 HttpRequestMessage request = new HttpRequestMessage
                                              {
@@ -366,9 +348,11 @@
                 // Cancel the call to the server
                 linkedTokenSource.Cancel();
 
-                //TODO: Conditional whether the event is logged out (alternatively the event id)
-                //Issue https://github.com/vmeretail/subscriptionservice/issues/89 will address this.
-                this.Logger.LogError(e, $"Exception has occured on EventAppeared with Event {serialisedEvent}");
+                if (this.LogEventsSettings.HasFlag(SubscriptionServiceBuilder.LogEvents.Errors))
+                {
+                    this.Logger.LogError(e, $"Exception has occured on EventAppeared with Event {serialisedEvent}");
+                }
+                
                 this.NakEvent(subscription, resolvedEvent, e);
             }
         }
@@ -390,7 +374,7 @@
         /// <exception cref="ArgumentNullException">groupName</exception>
         private void GuardAgainstInvalidGroupName(String groupName)
         {
-            if (string.IsNullOrEmpty(groupName))
+            if (String.IsNullOrEmpty(groupName))
             {
                 throw new ArgumentNullException(nameof(groupName));
             }
@@ -403,7 +387,7 @@
         /// <exception cref="ArgumentNullException">streamName</exception>
         private void GuardAgainstInvalidStreamName(String streamName)
         {
-            if (string.IsNullOrEmpty(streamName))
+            if (String.IsNullOrEmpty(streamName))
             {
                 throw new ArgumentNullException(nameof(streamName));
             }

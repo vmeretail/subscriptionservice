@@ -6,30 +6,33 @@ namespace Core3WorkerServiceExample
     using Newtonsoft.Json;
     using SubscriptionService.Factories;
 
-internal class WorkerEventFactory : IEventFactory
-{
-    #region Methods
-
     /// <summary>
-    /// Converts from.
     /// </summary>
-    /// <param name="persistedEvent">The persisted event.</param>
-    /// <returns></returns>
-    public String ConvertFrom(PersistedEvent persistedEvent)
+    /// <seealso cref="SubscriptionService.Factories.IEventFactory" />
+    internal class WorkerEventFactory : IEventFactory
     {
-        String json = Encoding.Default.GetString(persistedEvent.Data);
-        dynamic expandoObject = new ExpandoObject();
-        dynamic temp = JsonConvert.DeserializeAnonymousType(json, expandoObject);
+        #region Methods
 
-        //Add our new field in
-        temp.EventId = persistedEvent.EventId;
-        temp.EventType = persistedEvent.EventType;
-        temp.EventDateTime = persistedEvent.Created;
-        temp.Metadata = Encoding.Default.GetString(persistedEvent.Metadata);
+        /// <summary>
+        /// Converts from.
+        /// </summary>
+        /// <param name="persistedEvent">The persisted event.</param>
+        /// <returns></returns>
+        public String ConvertFrom(PersistedEvent persistedEvent)
+        {
+            String json = Encoding.Default.GetString(persistedEvent.Data);
+            dynamic expandoObject = new ExpandoObject();
+            dynamic temp = JsonConvert.DeserializeAnonymousType(json, expandoObject);
 
-        return JsonConvert.SerializeObject(temp);
+            //Add our new field in
+            temp.EventId = persistedEvent.EventId;
+            temp.EventType = persistedEvent.EventType;
+            temp.EventDateTime = persistedEvent.Created;
+            temp.Metadata = Encoding.Default.GetString(persistedEvent.Metadata);
+
+            return JsonConvert.SerializeObject(temp);
+        }
+
+        #endregion
     }
-
-    #endregion
-}
 }

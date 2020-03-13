@@ -60,8 +60,8 @@ namespace Core3WorkerServiceExample
             this.Connection = EventStoreConnection.Create(Worker.EventStoreConnectionString);
             await this.Connection.ConnectAsync();
 
-            // New up the Subscription Service instance
-            this.SubscriptionService = new SubscriptionService(new WorkerEventFactory(),this.Connection);
+            // New up the Subscription Service instance via SubscriptionServiceBuilder
+            this.SubscriptionService = new SubscriptionServiceBuilder().UseConnection(this.Connection).UseEventFactory(new WorkerEventFactory()).Build();
 
             // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 
             // adding a Authorization token onto the HTTP POST (as demonstrated below)
