@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Reflection;
@@ -164,6 +165,20 @@
             subscriptionInfo.config.startFrom.ShouldBe(subscription.StreamStartPosition);
         }
 
+        private async Task CheckSubscriptionHasBeenDeleted(String streamName, String groupName)
+        {
+            String scheme = this.TestsFixture.EventStoreDockerConfiguration.IsLegacyVersion ? "http" : "https";
+            String uri = $"{scheme}://127.0.0.1:{this.DockerHelper.EventStoreHttpPort}/subscriptions/{streamName}/{groupName}/info";
+            HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
+            requestMessage.Headers.Add("Accept", @"application/json");
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
+
+            HttpClient client = DockerHelper.CreateHttpClient(uri);
+            HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, CancellationToken.None);
+            responseMessage.IsSuccessStatusCode.ShouldBeFalse($"Response Code [{responseMessage.StatusCode} returned]");
+            responseMessage.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        }
+
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
@@ -190,33 +205,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             String aggregateName1 = "SalesTransactionAggregate";
@@ -300,33 +289,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
@@ -384,34 +347,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
-
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
@@ -478,33 +414,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
@@ -563,33 +473,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             String aggregateName1 = "SalesTransactionAggregate";
@@ -675,33 +559,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
@@ -759,33 +617,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             String aggregateName = "SalesTransactionAggregate";
@@ -855,33 +687,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -922,33 +728,7 @@
             this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
 
             // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
-
-            eventStoreConnection.Connected += (sender,
-                                               args) =>
-                                              {
-                                                  this.TestsFixture.LogMessageToTrace($"Connected");
-                                              };
-
-            eventStoreConnection.Closed += (sender,
-                                            args) =>
-                                           {
-                                               this.TestsFixture.LogMessageToTrace($"Closed");
-                                           };
-
-            eventStoreConnection.ErrorOccurred += (sender,
-                                                   args) =>
-                                                  {
-                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
-                                                  };
-
-            eventStoreConnection.Reconnecting += (sender,
-                                                  args) =>
-                                                 {
-                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
-                                                 };
-
-            await eventStoreConnection.ConnectAsync();
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
             List<Subscription> subscriptionList = new List<Subscription>();
@@ -994,6 +774,118 @@
         private void SubscriptionService_TraceGenerated(String trace)
         {
             this.TestsFixture.LogMessageToTrace(trace);
+        }
+
+        [Fact]
+        public async Task SubscriptionService_RemoveSubscription_PersistentSubscriptionRemoved()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
+
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
+
+            // 1. Arrange
+            List<Subscription> subscriptionList = new List<Subscription>();
+            String streamName = "$ce-SalesTransactionAggregate";
+            String groupName = "TestGroup";
+            subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
+            
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+
+            await subscriptionService.Start(subscriptionList, CancellationToken.None);
+
+            foreach (Subscription subscription in subscriptionList)
+            {
+                await this.CheckSubscriptionHasBeenCreated(subscription);
+            }
+
+            // 2. Act
+            await subscriptionService.RemoveSubscription(groupName, streamName, CancellationToken.None);
+
+            // 3. Assert
+            await this.CheckSubscriptionHasBeenDeleted(groupName,streamName);
+
+            // 4. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+            eventStoreConnection.Close();
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
+        }
+
+        [Fact]
+        public async Task SubscriptionService_RemoveSubscription_RemoveNonExsistantSubscription_ErrorThrown()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
+
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
+
+            // 1. Arrange
+            List<Subscription> subscriptionList = new List<Subscription>();
+            String streamName = "$ce-SalesTransactionAggregate";
+            String groupName = "TestGroup";
+            String groupNameToRemove = "TestGroup1";
+            subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
+
+            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
+            subscriptionService.TraceGenerated += this.SubscriptionService_TraceGenerated;
+            subscriptionService.ErrorHasOccured += this.SubscriptionService_ErrorHasOccured;
+
+            await subscriptionService.Start(subscriptionList, CancellationToken.None);
+
+            foreach (Subscription subscription in subscriptionList)
+            {
+                await this.CheckSubscriptionHasBeenCreated(subscription);
+            }
+
+            // 2. Act & Assert
+            Should.Throw<InvalidOperationException>(async () => { await subscriptionService.RemoveSubscription(groupNameToRemove, streamName, CancellationToken.None); });
+
+            // 3. Cleanup
+            await subscriptionService.Stop(CancellationToken.None);
+            eventStoreConnection.Close();
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
+        }
+
+        private async Task<IEventStoreConnection> SetupEventStoreConnection(String connectionString)
+        {
+            IEventStoreConnection eventStoreConnection = EventStore.ClientAPI.EventStoreConnection.Create(connectionString);
+
+            eventStoreConnection.Connected += (sender,
+                                               args) =>
+                                              {
+                                                  this.TestsFixture.LogMessageToTrace($"Connected");
+                                              };
+
+            eventStoreConnection.Closed += (sender,
+                                            args) =>
+                                           {
+                                               this.TestsFixture.LogMessageToTrace($"Closed");
+                                           };
+
+            eventStoreConnection.ErrorOccurred += (sender,
+                                                   args) =>
+                                                  {
+                                                      this.TestsFixture.LogMessageToTrace($"ErrorOccurred {args.Exception.ToString()}");
+                                                  };
+
+            eventStoreConnection.Reconnecting += (sender,
+                                                  args) =>
+                                                 {
+                                                     this.TestsFixture.LogMessageToTrace($"Reconnecting");
+                                                 };
+
+            await eventStoreConnection.ConnectAsync();
+            return eventStoreConnection;
         }
 
         #endregion
