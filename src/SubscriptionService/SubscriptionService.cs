@@ -2,17 +2,15 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Dynamic;
     using System.Linq;
     using System.Net.Http;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-    using Domain;
+    using Configuration;
     using EventStore.ClientAPI;
     using EventStore.ClientAPI.SystemData;
     using Factories;
-    using Newtonsoft.Json;
 
     /// <summary>
     /// </summary>
@@ -20,9 +18,9 @@
     /// <seealso cref="ISubscriptionService" />
     public class SubscriptionService : ISubscriptionService
     {
-        private readonly IEventFactory EventFactory;
-
         #region Fields
+
+        private readonly IEventFactory EventFactory;
 
         /// <summary>
         /// The event store connection
@@ -42,16 +40,15 @@
         /// <exception cref="ArgumentNullException">Value cannot be null - eventStoreConnection</exception>
         public SubscriptionService(IEventStoreConnection eventStoreConnection,
                                    String username = "admin",
-                                   String password = "changeit") : this(Factories.EventFactory.Create(), eventStoreConnection,username,password)
+                                   String password = "changeit") : this(Factories.EventFactory.Create(), eventStoreConnection, username, password)
         {
-            
         }
+
         public SubscriptionService(IEventFactory eventFactory,
                                    IEventStoreConnection eventStoreConnection,
                                    String username = "admin",
                                    String password = "changeit")
         {
-
             if (eventStoreConnection == null)
             {
                 throw new ArgumentNullException("Value cannot be null", nameof(eventStoreConnection));
@@ -95,6 +92,8 @@
 
         #region Events
 
+        public event TraceHandler ErrorHasOccured;
+
         /// <summary>
         /// Occurs when [on event appeared].
         /// </summary>
@@ -105,18 +104,35 @@
         /// </summary>
         public event TraceHandler TraceGenerated;
 
-        public event TraceHandler ErrorHasOccured;
-
         #endregion
 
         #region Methods
+
+        public async Task RemoveSubscription(String groupName,
+                                             String streamName,
+                                             CancellationToken cancellationToken)
+        {
+            this.GuardAgainstInvalidGroupName(groupName);
+            this.GuardAgainstInvalidStreamName(streamName);
+
+            try
+            {
+                await this.EventStoreConnection.DeletePersistentSubscriptionAsync(streamName, groupName);
+            }
+            catch(Exception e)
+            {
+                this.Trace(e);
+                throw;
+            }
+        }
 
         /// <summary>
         /// Start with no config
         /// </summary>
         /// <param name="subscriptions">The subscriptions.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        public async Task Start(List<Configuration.Subscription> subscriptions, CancellationToken cancellationToken)
+        public async Task Start(List<Subscription> subscriptions,
+                                CancellationToken cancellationToken)
         {
             if (subscriptions == null || subscriptions.Any() == false)
             {
@@ -126,11 +142,11 @@
             //Convert the Subscriptions to our internal model
             SubscriptionFactory subscriptionFactory = new SubscriptionFactory();
 
-            List<Subscription> subscriptionsList = new List<Subscription>();
+            List<Domain.Subscription> subscriptionsList = new List<Domain.Subscription>();
 
             subscriptions.ForEach(s => subscriptionsList.Add(subscriptionFactory.CreateFrom(s)));
 
-            foreach (Subscription subscription in subscriptionsList)
+            foreach (Domain.Subscription subscription in subscriptionsList)
             {
                 await this.ConnectToSubscription(subscription, cancellationToken);
             }
@@ -155,7 +171,7 @@
         /// </summary>
         /// <param name="subscription">The subscription.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        private async Task ConnectToSubscription(Subscription subscription,
+        private async Task ConnectToSubscription(Domain.Subscription subscription,
                                                  CancellationToken cancellationToken)
         {
             Action<EventStorePersistentSubscriptionBase, ResolvedEvent> eventAppearedAction = async (eventStorePersistentSubscriptionBase,
@@ -181,14 +197,13 @@
             async Task ConnectToPersistentSubscriptionAsync()
             {
                 await this.EventStoreConnection.ConnectToPersistentSubscriptionAsync(subscription.StreamName,
-                                                                                                                                   subscription.GroupName,
-                                                                                                                                   eventAppearedAction,
-                                                                                                                                   subscriptionDroppedAction,
-                                                                                                                                   null,
-                                                                                                                                   subscription.NumberOfConcurrentMessages,
-                                                                                                                                   false);
+                                                                                     subscription.GroupName,
+                                                                                     eventAppearedAction,
+                                                                                     subscriptionDroppedAction,
+                                                                                     null,
+                                                                                     subscription.NumberOfConcurrentMessages,
+                                                                                     false);
             }
-
 
             try
             {
@@ -215,7 +230,7 @@
         /// </summary>
         /// <param name="subscription">The subscription.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        private async Task CreatePersistentSubscriptionFromBeginningAsync(Subscription subscription,
+        private async Task CreatePersistentSubscriptionFromBeginningAsync(Domain.Subscription subscription,
                                                                           CancellationToken cancellationToken)
         {
             PersistentSubscriptionSettingsBuilder settings = this.GetDefaultPersistentSubscriptionSettingsBuilder().WithMaxRetriesOf(subscription.MaxRetryCount);
@@ -227,7 +242,6 @@
             {
                 settings.StartFrom(subscription.StreamStartPosition);
             }
-            
 
             await this.EventStoreConnection.CreatePersistentSubscriptionAsync(subscription.StreamName, subscription.GroupName, settings, this.DefaultUserCredentials);
         }
@@ -242,7 +256,7 @@
         /// <exception cref="Exception">Response from server was {response}</exception>
         private async Task EventAppeared(EventStorePersistentSubscriptionBase subscription,
                                          ResolvedEvent resolvedEvent,
-                                         Subscription subscriptionConfiguration,
+                                         Domain.Subscription subscriptionConfiguration,
                                          CancellationToken cancellationToken)
         {
             CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -279,8 +293,6 @@
                                                                       recordedEvent.EventType,
                                                                       recordedEvent.IsJson,
                                                                       recordedEvent.Metadata);
-
-
 
                 //Get the serialised data
                 String serialisedData = this.EventFactory.ConvertFrom(persistedEvent);
@@ -323,7 +335,6 @@
                 this.Trace($"Event Id {resolvedEvent.Event.EventId} - Event POST successful");
 
                 subscription.Acknowledge(resolvedEvent);
-
             }
             catch(Exception e)
             {
@@ -343,6 +354,32 @@
         {
             //All standard settings in here. We might put configuration in here.
             return PersistentSubscriptionSettings.Create().ResolveLinkTos().WithMaxRetriesOf(10).WithMessageTimeoutOf(TimeSpan.FromSeconds(10));
+        }
+
+        /// <summary>
+        /// Guards the name of the against invalid group.
+        /// </summary>
+        /// <param name="groupName">Name of the group.</param>
+        /// <exception cref="ArgumentNullException">groupName</exception>
+        private void GuardAgainstInvalidGroupName(String groupName)
+        {
+            if (string.IsNullOrEmpty(groupName))
+            {
+                throw new ArgumentNullException(nameof(groupName));
+            }
+        }
+
+        /// <summary>
+        /// Guards the name of the against invalid stream.
+        /// </summary>
+        /// <param name="streamName">Name of the stream.</param>
+        /// <exception cref="ArgumentNullException">streamName</exception>
+        private void GuardAgainstInvalidStreamName(String streamName)
+        {
+            if (string.IsNullOrEmpty(streamName))
+            {
+                throw new ArgumentNullException(nameof(streamName));
+            }
         }
 
         /// <summary>
