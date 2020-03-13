@@ -29,8 +29,10 @@
             List<Subscription> subscriptions = new List<Subscription>();
             subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", "https://enyaw1mc4if0j.x.pipedream.net/", 2, 1));
             subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", "https://enr3vi91wr5c.x.pipedream.net/", 2, 1));
-
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection);
+            
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .Build();
 
             subscriptionService.OnEventAppeared += Program.SubscriptionService_OnEventAppeared;
 
@@ -39,15 +41,6 @@
             await subscriptionService.RemoveSubscription("TestGroup", "$ce-TestStream", CancellationToken.None);
 
             Console.ReadKey();
-        }
-
-        /// <summary>
-        /// Subscriptions the service error has occured.
-        /// </summary>
-        /// <param name="trace">The trace.</param>
-        private static void SubscriptionService_ErrorHasOccured(String trace)
-        {
-            Console.WriteLine(trace);
         }
 
         /// <summary>
@@ -60,15 +53,6 @@
         {
             //The user can make some changes (like adding headers)
             e.Headers.Add("Authorization", "Bearer someToken");
-        }
-
-        /// <summary>
-        /// Subscriptions the service trace generated.
-        /// </summary>
-        /// <param name="trace">The trace.</param>
-        private static void SubscriptionService_TraceGenerated(String trace)
-        {
-            Console.WriteLine(trace);
         }
 
         #endregion

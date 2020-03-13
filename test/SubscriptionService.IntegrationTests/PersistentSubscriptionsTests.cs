@@ -176,7 +176,10 @@
             subscriptionList.Add(Subscription.Create(streamName2, "TestGroup1", this.EndPointUrl1));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             // 2. Act
             // Start the subscription service
@@ -241,7 +244,10 @@
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup", this.EndPointUrl));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             // 2. Act
             // Start the subscription service
@@ -299,7 +305,10 @@
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup1", this.EndPointUrl1));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             // 2. Act
             // Start the subscription service
@@ -351,7 +360,10 @@
             subscriptionList.Add(Subscription.Create(streamName, "TestGroup", this.EndPointUrl));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             // 2. Act
             // Start the subscription service
@@ -438,7 +450,10 @@
             subscriptionList2.Add(Subscription.Create(streamName2, "TestGroup", this.EndPointUrl1));
 
             // Create instance of the Subscription Service
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             // 2. Act
             // Start the subscription service
@@ -503,7 +518,11 @@
             await eventStoreConnection.AppendToStreamAsync(streamName, -1, eventData);
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(new TestEventFactory(), eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .UseEventFactory(new TestEventFactory())
+                                                       .Build();
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -571,7 +590,10 @@
             await eventStoreConnection.AppendToStreamAsync(streamName2, -1, eventData);
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -613,7 +635,10 @@
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -654,7 +679,10 @@
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl, maxRetryCount:maxRetryCount, streamStartPosition:startFrom));
 
             // 2. Act
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -689,7 +717,10 @@
             String groupName = "TestGroup";
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 
@@ -729,7 +760,10 @@
             String groupNameToRemove = "TestGroup1";
             subscriptionList.Add(Subscription.Create(streamName, groupName, this.EndPointUrl));
 
-            SubscriptionService subscriptionService = new SubscriptionService(eventStoreConnection, logger:this.Logger);
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
+                                                       .UseConnection(eventStoreConnection)
+                                                       .AddLogger(this.Logger)
+                                                       .Build();
 
             await subscriptionService.Start(subscriptionList, CancellationToken.None);
 

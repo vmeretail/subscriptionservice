@@ -1,24 +1,39 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-
 namespace Core3WorkerServiceExample
 {
+    using System;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+
+    /// <summary>
+    /// 
+    /// </summary>
     public class Program
     {
-        public static void Main(string[] args)
+        #region Methods
+
+        /// <summary>
+        /// Creates the host builder.
+        /// </summary>
+        /// <param name="args">The arguments.</param>
+        /// <returns></returns>
+        public static IHostBuilder CreateHostBuilder(String[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            return Host.CreateDefaultBuilder(args).ConfigureServices((hostContext,
+                                                                      services) =>
+                                                                     {
+                                                                         services.AddHostedService<Worker>();
+                                                                     });
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddHostedService<Worker>();
-                });
+        /// <summary>
+        /// Mains the specified arguments.
+        /// </summary>
+        /// <param name="args">The arguments.</param>
+        public static void Main(String[] args)
+        {
+            Program.CreateHostBuilder(args).Build().Run();
+        }
+
+        #endregion
     }
 }

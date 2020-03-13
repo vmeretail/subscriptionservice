@@ -21,7 +21,10 @@ namespace SubscriptionService.UnitTests
             Mock<IEventStoreConnection> eventStoreConnectionMock = new Mock<IEventStoreConnection>(MockBehavior.Strict);
 
             // 2. Act
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
+                .UseConnection(eventStoreConnectionMock.Object);
+
+            ISubscriptionService subscriptionService = new SubscriptionService(subscriptionServiceBuilder);
 
             // 3. Assert
             subscriptionService.ShouldNotBeNull();
@@ -31,13 +34,11 @@ namespace SubscriptionService.UnitTests
         public void SubscriptionService_EventStoreConnection_IsNull_ErrorIsThrown()
         {
             // 1. Arrange
-            IEventStoreConnection eventStoreConnection = null;
-
             // 3. Assert
-            Should.Throw<ArgumentNullException>(() =>
+            Should.Throw<NullReferenceException>(() =>
                                                 {
                                                     ISubscriptionService subscriptionService =
-                                                        new SubscriptionService(eventStoreConnection);
+                                                        new SubscriptionService(new SubscriptionServiceBuilder());
                                                 });
         }
 
@@ -55,7 +56,10 @@ namespace SubscriptionService.UnitTests
                                                                                        It.IsAny<int>(),
                                                                                        It.IsAny<Boolean>())).ReturnsAsync(default(EventStorePersistentSubscription));
 
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
+                .UseConnection(eventStoreConnectionMock.Object);
+
+            ISubscriptionService subscriptionService = new SubscriptionService(subscriptionServiceBuilder);
 
             // 2. Act
             await subscriptionService.Start(TestData.Subscriptions, CancellationToken.None);
@@ -78,7 +82,11 @@ namespace SubscriptionService.UnitTests
                                                                                        It.IsAny<int>(),
                                                                                        It.IsAny<Boolean>())).ReturnsAsync(default(EventStorePersistentSubscription));
 
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
+                .UseConnection(eventStoreConnectionMock.Object);
+
+            ISubscriptionService subscriptionService = new SubscriptionService(subscriptionServiceBuilder);
+
             List<Subscription> subscriptionsList = null;
 
             // 2. Act
@@ -103,7 +111,11 @@ namespace SubscriptionService.UnitTests
                                                                                        It.IsAny<int>(),
                                                                                        It.IsAny<Boolean>())).ReturnsAsync(default(EventStorePersistentSubscription));
 
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
+                .UseConnection(eventStoreConnectionMock.Object);
+
+            ISubscriptionService subscriptionService = new SubscriptionService(subscriptionServiceBuilder);
+
             List<Subscription> subscriptionsList = new List<Subscription>();
 
             // 2. Act
@@ -127,7 +139,11 @@ namespace SubscriptionService.UnitTests
                                                                                        It.IsAny<int>(),
                                                                                        It.IsAny<Boolean>())).ReturnsAsync(default(EventStorePersistentSubscription));
 
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
+                .UseConnection(eventStoreConnectionMock.Object);
+
+            ISubscriptionService subscriptionService = new SubscriptionService(subscriptionServiceBuilder);
+
             await subscriptionService.Start(TestData.Subscriptions, CancellationToken.None);
 
             // 2. Act
@@ -153,7 +169,11 @@ namespace SubscriptionService.UnitTests
                                                                                        It.IsAny<int>(),
                                                                                        It.IsAny<Boolean>())).ReturnsAsync(default(EventStorePersistentSubscription));
 
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
+                .UseConnection(eventStoreConnectionMock.Object);
+
+            ISubscriptionService subscriptionService = new SubscriptionService(subscriptionServiceBuilder);
+
             await subscriptionService.Start(TestData.Subscriptions, CancellationToken.None);
             String streamName = "$ce-SalesTransactionAggregate";
 
@@ -180,7 +200,11 @@ namespace SubscriptionService.UnitTests
                                                                                        It.IsAny<int>(),
                                                                                        It.IsAny<Boolean>())).ReturnsAsync(default(EventStorePersistentSubscription));
 
-            ISubscriptionService subscriptionService = new SubscriptionService(eventStoreConnectionMock.Object);
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
+                .UseConnection(eventStoreConnectionMock.Object);
+
+            ISubscriptionService subscriptionService = new SubscriptionService(subscriptionServiceBuilder);
+
             await subscriptionService.Start(TestData.Subscriptions, CancellationToken.None);
             String groupName = "TestGroup";
 
