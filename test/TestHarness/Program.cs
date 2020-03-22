@@ -55,6 +55,7 @@
             await eventStoreConnection.ConnectAsync();
 
             //NOTE: Different way to connect to stream
+            //NOTE: Could the UI be notified of this somehow
             eventStoreConnection.SubscribeToStreamFrom("$ce-CatchupTest",
                                                        null,//this is the important part, remembering the lastCheckpoint
                                                        CatchUpSubscriptionSettings.Default, //Need to review these settings
