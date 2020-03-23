@@ -54,11 +54,14 @@
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
 
+            CatchUpSubscriptionSettings catchUpSubscriptionSettings = new CatchUpSubscriptionSettings(100,100,true,true,"Test Subscription 1");
+
             //NOTE: Different way to connect to stream
             //NOTE: Could the UI be notified of this somehow
             eventStoreConnection.SubscribeToStreamFrom("$ce-CatchupTest",
                                                        null,//this is the important part, remembering the lastCheckpoint
-                                                       CatchUpSubscriptionSettings.Default, //Need to review these settings
+                                                            //CatchUpSubscriptionSettings.Default, //Need to review these settings
+                                                       catchUpSubscriptionSettings,
                                                        EventAppeared, //NOTE: The event appeared has some different arguments
                                                        LiveProcessingStarted,
                                                        SubscriptionDropped);
@@ -69,14 +72,19 @@
                                                 Exception arg3)
         {
             //NOTE: What will we do here?
-            Console.WriteLine($"SubscriptionDropped {arg1.StreamId}");
+            Console.WriteLine($"SubscriptionDropped: Stream Name: [{arg1.SubscriptionName}] Reason[{arg2}]");
+
+            Console.WriteLine("About to stop");
+            arg1.Stop();
+
+            Console.WriteLine("After stop");
         }
 
         private static void LiveProcessingStarted(EventStoreCatchUpSubscription obj)
         {
             //NOTE: Once we have caught up, this gets fired - but any new events will then appear in EventAppeared
             //This is for information only (I think)
-            Console.WriteLine($"LiveProcessingStarted {obj.SubscriptionName}");
+            Console.WriteLine($"LiveProcessingStarted: Stream Name: [{obj.SubscriptionName}]");
         }
 
         private static Task EventAppeared(EventStoreCatchUpSubscription arg1,
@@ -84,9 +92,13 @@
         {
             //The trick will be using our existing Event Appeared
 
-            Console.WriteLine($"EventAppeared {arg1.StreamId} {arg1.SubscriptionName} {arg2.OriginalEventNumber}");
+            Console.WriteLine($"EventAppeared: Subscription Name: {arg1.SubscriptionName} Event Number: {arg2.OriginalEventNumber}");
 
             //NOTE: No Acking / Naking!
+
+            //NOTE: Me might offer a "parking" facility here - we could write the event to a stream (added in as part of the initial config for this catchup)
+
+            //throw new Exception("EventAppeared failed to deliver.");
 
             return Task.CompletedTask;
         }
