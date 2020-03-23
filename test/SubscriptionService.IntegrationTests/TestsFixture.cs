@@ -45,6 +45,8 @@
                                       String endpointUrl,
                                       HttpClient readmodelHttpClient)
         {
+            this.LogMessageToTrace($"CheckEvents - looking for {eventIds.Count} events");
+
             List<Guid> foundEvents = new List<Guid>();
 
             await Retry.For(async () =>
