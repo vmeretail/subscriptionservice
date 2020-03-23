@@ -45,6 +45,8 @@
                                       String endpointUrl,
                                       HttpClient readmodelHttpClient)
         {
+            this.LogMessageToTrace($"CheckEvents - looking for {eventIds.Count} events");
+
             List<Guid> foundEvents = new List<Guid>();
 
             await Retry.For(async () =>
@@ -64,9 +66,11 @@
 
                                 List<String> retrievedEvents = jsonArray.Select(x => x["EventId"].Value<String>()).ToList();
 
+                                this.LogMessageToTrace($"Found {retrievedEvents.Count} events");
+
                                 if (retrievedEvents.Any() == false)
                                 {
-                                    throw new Exception();
+                                    throw new Exception($"No events returned");
                                 }
 
                                 foundEvents.AddRange(retrievedEvents.Select(x => Guid.Parse(x)));
