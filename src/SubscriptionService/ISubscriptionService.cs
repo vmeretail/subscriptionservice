@@ -43,6 +43,9 @@
         Task Start(List<Subscription> subscriptions,
                    CancellationToken cancellationToken);
 
+        Task StartCatchupSubscriptions(List<CatchupSubscription> catchupSubscriptions,
+                                       CancellationToken cancellationToken);
+
         /// <summary>
         /// Stop the service
         /// </summary>
@@ -61,10 +64,4 @@
 
         #endregion
     }
-
-    /// <summary>
-    /// Delegate TraceHandler
-    /// </summary>
-    /// <param name="trace">The trace.</param>
-    public delegate void TraceHandler(String trace);
 }

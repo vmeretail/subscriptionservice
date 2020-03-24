@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Net.Http;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -156,6 +157,68 @@
             this.IsStarted = true;
         }
 
+        public async Task StartCatchupSubscriptions(List<CatchupSubscription> catchupSubscriptions,
+                                              CancellationToken cancellationToken)
+        {
+            if (catchupSubscriptions == null || catchupSubscriptions.Any() == false)
+            {
+                throw new ArgumentNullException(nameof(catchupSubscriptions), "Value cannot be null or empty");
+            }
+
+            //TODO: Internal factory for catchupSubscriptions?
+
+            foreach (CatchupSubscription catchupSubscription in catchupSubscriptions)
+            {
+                //TODO: over time, we might allow more of the settings to be fed in via the CatchupSubscription
+                CatchUpSubscriptionSettings catchUpSubscriptionSettings =
+                    new CatchUpSubscriptionSettings(CatchUpSubscriptionSettings.Default.MaxLiveQueueSize,
+                                                    CatchUpSubscriptionSettings.Default.ReadBatchSize,
+                                                    CatchUpSubscriptionSettings.Default.VerboseLogging,
+                                                    CatchUpSubscriptionSettings.Default.VerboseLogging,
+                                                    catchupSubscription.SubscriptionName);
+
+
+                Action<EventStoreCatchUpSubscription, ResolvedEvent> eventAppearedFromCatchupSubscription = async (eventStoreCatchUpSubscription,
+                                                                                                                   resolvedEvent) =>
+                                                                                                            {
+                                                                                                                await this
+                                                                                                                    .EventAppearedFromCatchupSubscription(eventStoreCatchUpSubscription,
+                                                                                                                                                          resolvedEvent,
+                                                                                                                                                          catchupSubscription,
+                                                                                                                                                          cancellationToken);
+                                                                                                            };
+
+                //NOTE: Different way to connect to stream
+                //NOTE: Could the UI be notified of this somehow
+                this.EventStoreConnection.SubscribeToStreamFrom(catchupSubscription.StreamName,
+                                                                catchupSubscription.LastCheckpoint,
+                                                                catchUpSubscriptionSettings,
+                                                                eventAppearedFromCatchupSubscription,
+                                                                LiveProcessingStarted,
+                                                                SubscriptionDropped);
+            }
+
+            //TODO: Might want something a bit smarter to allow the user some understanding of what is actually running.
+            this.IsStarted = true;
+        }
+
+
+
+        private void LiveProcessingStarted(EventStoreCatchUpSubscription obj)
+        {
+            //NOTE: Once we have caught up, this gets fired - but any new events will then appear in EventAppeared
+            //This is for information only (I think)
+            this.Logger.LogInformation($"LiveProcessingStarted: Stream Name: [{obj.SubscriptionName}]");
+        }
+
+        private void SubscriptionDropped(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,
+                                         SubscriptionDropReason subscriptionDropReason,
+                                         Exception e)
+        {
+            //TODO: Auto reconnect will be implemented (some how)
+            this.Logger.LogError(e, $"SubscriptionDropped: Stream Name: [{eventStoreCatchUpSubscription.SubscriptionName}] Reason[{subscriptionDropReason}]");
+        }
+
         /// <summary>
         /// Stop the service
         /// </summary>
@@ -180,7 +243,7 @@
             Action<EventStorePersistentSubscriptionBase, ResolvedEvent> eventAppearedAction = async (eventStorePersistentSubscriptionBase,
                                                                                                      resolvedEvent) =>
                                                                                               {
-                                                                                                  await this.EventAppeared(eventStorePersistentSubscriptionBase,
+                                                                                                  await this.EventAppearedForPersistentSubscription(eventStorePersistentSubscriptionBase,
                                                                                                                            resolvedEvent,
                                                                                                                            subscription,
                                                                                                                            cancellationToken);
@@ -249,40 +312,35 @@
             await this.EventStoreConnection.CreatePersistentSubscriptionAsync(subscription.StreamName, subscription.GroupName, settings, this.DefaultUserCredentials);
         }
 
-        /// <summary>
-        /// Events the appeared.
-        /// </summary>
-        /// <param name="subscription">The subscription.</param>
-        /// <param name="resolvedEvent">The resolved event.</param>
-        /// <param name="subscriptionConfiguration">The subscription configuration.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <exception cref="Exception">Response from server was {response}</exception>
-        private async Task EventAppeared(EventStorePersistentSubscriptionBase subscription,
-                                         ResolvedEvent resolvedEvent,
-                                         Domain.Subscription subscriptionConfiguration,
+
+        private async Task EventAppearedFromCatchupSubscription(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,
+                                                                ResolvedEvent resolvedEvent,
+                                                                CatchupSubscription catchupSubscription,
+                                                                CancellationToken cancellationToken)
+        {
+            //This is the entry point for emitted events from catchup subscriptions.
+
+            if (resolvedEvent.Event == null)
+            {
+                return;
+            }
+
+            //TODO: we will eventually handle parked / dead letter events here.
+
+            await EventAppeared(resolvedEvent, catchupSubscription, cancellationToken);
+        }
+
+
+        private async Task EventAppeared(ResolvedEvent resolvedEvent, 
+                                         Domain.Subscription subscriptionConfiguration, 
                                          CancellationToken cancellationToken)
         {
-            CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            String serialisedEvent = null; //Put this out here icnase we need to log the event out for errors.
+           
+            String serialisedEvent = null; //Put this out here incase we need to log the event out for errors.
 
             try
             {
-                //This helps stop sending unused events to our read models etc (which will probably end up parked anyway)
-                if (resolvedEvent.Event == null)
-                {
-                    // This indicates we have a badly formatted event so just ignore it as nothing can be done 
-                    subscription.Acknowledge(resolvedEvent);
-                    return;
-                }
-
-                if (resolvedEvent.Event.EventType.StartsWith("$"))
-                {
-                    //We will ignore event types beginning with the character $.
-                    subscription.Acknowledge(resolvedEvent);
-                    return;
-                }
-
-                this.Logger.LogInformation($"Event Id {resolvedEvent.Event.EventId} - EventAppearedFromPersistentSubscription");
+                this.Logger.LogInformation($"EventAppeared - Event Id {resolvedEvent.Event.EventId}");
 
                 RecordedEvent recordedEvent = resolvedEvent.Event;
 
@@ -301,18 +359,18 @@
                 //Get the serialised data
                 serialisedEvent = this.EventFactory.ConvertFrom(persistedEvent);
 
-                if(this.LogEventsSettings.HasFlag(SubscriptionServiceBuilder.LogEvents.All))
+                if (this.LogEventsSettings.HasFlag(SubscriptionServiceBuilder.LogEvents.All))
                 {
                     this.Logger.LogInformation($"Serialised data is {serialisedEvent}");
                 }
 
                 //Build a standard WebRequest
                 HttpRequestMessage request = new HttpRequestMessage
-                                             {
-                                                 Method = HttpMethod.Post,
-                                                 Content = new StringContent(serialisedEvent, Encoding.UTF8, "application/json"),
-                                                 RequestUri = subscriptionConfiguration.EndPointUri
-                                             };
+                {
+                    Method = HttpMethod.Post,
+                    Content = new StringContent(serialisedEvent, Encoding.UTF8, "application/json"),
+                    RequestUri = subscriptionConfiguration.EndPointUri
+                };
 
                 if (this.OnEventAppeared != null)
                 {
@@ -340,7 +398,43 @@
                 }
 
                 this.Logger.LogInformation($"Event Id {resolvedEvent.Event.EventId} - Event POST successful");
+            }
+            catch (Exception e)
+            {
+                if (this.LogEventsSettings.HasFlag(SubscriptionServiceBuilder.LogEvents.Errors))
+                {
+                    this.Logger.LogError(e, $"Exception has occured on EventAppeared with Event {serialisedEvent}");
+                }
 
+                //We will let the caller decide what happens next
+                throw;
+            }
+        }
+
+        private async Task EventAppearedForPersistentSubscription(EventStorePersistentSubscriptionBase subscription,
+                                         ResolvedEvent resolvedEvent,
+                                         Domain.Subscription subscriptionConfiguration,
+                                         CancellationToken cancellationToken)
+        {
+            CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            try
+            {
+                if (resolvedEvent.Event == null)
+                {
+                    return;
+                }
+
+                if (resolvedEvent.Event.EventType.StartsWith("$"))
+                {
+                    //We will ignore event types beginning with the character $.
+                    subscription.Acknowledge(resolvedEvent);
+                    return;
+                }
+
+                await EventAppeared(resolvedEvent, subscriptionConfiguration, cancellationToken);
+
+                //If we reach here, safe to ACK
                 subscription.Acknowledge(resolvedEvent);
             }
             catch(Exception e)
@@ -348,11 +442,6 @@
                 // Cancel the call to the server
                 linkedTokenSource.Cancel();
 
-                if (this.LogEventsSettings.HasFlag(SubscriptionServiceBuilder.LogEvents.Errors))
-                {
-                    this.Logger.LogError(e, $"Exception has occured on EventAppeared with Event {serialisedEvent}");
-                }
-                
                 this.NakEvent(subscription, resolvedEvent, e);
             }
         }
