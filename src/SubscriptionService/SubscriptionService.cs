@@ -16,6 +16,7 @@
     using Subscription = global::SubscriptionService.Configuration.Subscription;
 
     /// <summary>
+    /// 
     /// </summary>
     /// <seealso cref="SubscriptionService.ISubscriptionService" />
     public class SubscriptionService : ISubscriptionService
@@ -50,11 +51,9 @@
         /// Initializes a new instance of the <see cref="SubscriptionService" /> class.
         /// </summary>
         /// <param name="subscriptionServiceBuilder">The subscription service builder.</param>
-        /// <exception cref="NullReferenceException">
-        /// SubscriptionServiceBuilder cannot be null
+        /// <exception cref="NullReferenceException">SubscriptionServiceBuilder cannot be null
         /// or
-        /// EventStoreConnection cannot be null
-        /// </exception>
+        /// EventStoreConnection cannot be null</exception>
         internal SubscriptionService(SubscriptionServiceBuilder subscriptionServiceBuilder)
         {
             if (subscriptionServiceBuilder == null)
@@ -85,7 +84,7 @@
         /// Gets a value indicating whether this instance is started.
         /// </summary>
         /// <value>
-        /// <c>true</c> if this instance is started; otherwise, <c>false</c>.
+        ///   <c>true</c> if this instance is started; otherwise, <c>false</c>.
         /// </value>
         public Boolean IsStarted { get; private set; }
 
