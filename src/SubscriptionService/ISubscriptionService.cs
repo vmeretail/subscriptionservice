@@ -35,6 +35,17 @@
         #region Methods
 
         /// <summary>
+        /// Removes the subscription.
+        /// </summary>
+        /// <param name="groupName">Name of the group.</param>
+        /// <param name="streamName">Name of the stream.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns></returns>
+        Task RemoveSubscription(String groupName,
+                                String streamName,
+                                CancellationToken cancellationToken);
+
+        /// <summary>
         /// Start with no config
         /// </summary>
         /// <param name="subscriptions">The subscriptions.</param>
@@ -43,6 +54,21 @@
         Task Start(List<Subscription> subscriptions,
                    CancellationToken cancellationToken);
 
+        /// <summary>
+        /// Starts the catchup subscription.
+        /// </summary>
+        /// <param name="catchupSubscription">The catchup subscription.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns></returns>
+        Task StartCatchupSubscription(CatchupSubscription catchupSubscription,
+                                      CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Starts the catchup subscriptions.
+        /// </summary>
+        /// <param name="catchupSubscriptions">The catchup subscriptions.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns></returns>
         Task StartCatchupSubscriptions(List<CatchupSubscription> catchupSubscriptions,
                                        CancellationToken cancellationToken);
 
@@ -52,15 +78,6 @@
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns></returns>
         Task Stop(CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Removes the subscription.
-        /// </summary>
-        /// <param name="groupName">Name of the group.</param>
-        /// <param name="streamName">Name of the stream.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns></returns>
-        Task RemoveSubscription(String groupName, String streamName, CancellationToken cancellationToken);
 
         #endregion
     }

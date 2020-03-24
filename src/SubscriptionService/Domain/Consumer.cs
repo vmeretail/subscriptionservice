@@ -5,7 +5,6 @@
     using System.Text;
 
     /// <summary>
-    /// 
     /// </summary>
     internal class Consumer
     {
@@ -21,25 +20,13 @@
         #region Constructors
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Consumer"/> class.
+        /// Initializes a new instance of the <see cref="Consumer" /> class.
         /// </summary>
         /// <param name="consumerBuilder">The consumer builder.</param>
         internal Consumer(ConsumerBuilder consumerBuilder)
         {
             this.ConsumerBuilder = consumerBuilder;
         }
-
-        #endregion
-
-        #region Properties
-
-        /// <summary>
-        /// Gets or sets the HTTP client.
-        /// </summary>
-        /// <value>
-        /// The HTTP client.
-        /// </value>
-        private readonly HttpClient HttpClient;
 
         #endregion
 
@@ -75,7 +62,6 @@
         {
             return this.ConsumerBuilder.EndPointUri;
         }
-
 
         #endregion
     }

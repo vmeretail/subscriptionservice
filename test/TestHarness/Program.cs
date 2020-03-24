@@ -6,8 +6,16 @@
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
     using SubscriptionService;
     using SubscriptionService.Configuration;
+    using NLog;
+    using NLog.Config;
+    using NLog.Extensions.Logging;
+    using ILogger = Microsoft.Extensions.Logging.ILogger;
+
 
     /// <summary>
     /// </summary>
@@ -54,53 +62,14 @@
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
 
-            CatchUpSubscriptionSettings catchUpSubscriptionSettings = new CatchUpSubscriptionSettings(100,100,true,true,"Test Subscription 1");
+            Microsoft.Extensions.Logging.ILogger logger = new LoggerFactory().AddNLog().CreateLogger("CatchupLogger");
 
-            //NOTE: Different way to connect to stream
-            //NOTE: Could the UI be notified of this somehow
-            eventStoreConnection.SubscribeToStreamFrom("$ce-CatchupTest",
-                                                       null,//this is the important part, remembering the lastCheckpoint
-                                                            //CatchUpSubscriptionSettings.Default, //Need to review these settings
-                                                       catchUpSubscriptionSettings,
-                                                       EventAppeared, //NOTE: The event appeared has some different arguments
-                                                       LiveProcessingStarted,
-                                                       SubscriptionDropped);
-        }
+            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder().UseConnection(eventStoreConnection).AddLogger(logger).Build();
 
-        private static void SubscriptionDropped(EventStoreCatchUpSubscription arg1,
-                                                SubscriptionDropReason arg2,
-                                                Exception arg3)
-        {
-            //NOTE: What will we do here?
-            Console.WriteLine($"SubscriptionDropped: Stream Name: [{arg1.SubscriptionName}] Reason[{arg2}]");
+            Uri uri = new Uri("https://envfx96fll0ja.x.pipedream.net");
+            CatchupSubscription  catchupSubscription= CatchupSubscription.Create("Test Catchup1", "$ce-CatchupTest", 4,uri);
 
-            Console.WriteLine("About to stop");
-            arg1.Stop();
-
-            Console.WriteLine("After stop");
-        }
-
-        private static void LiveProcessingStarted(EventStoreCatchUpSubscription obj)
-        {
-            //NOTE: Once we have caught up, this gets fired - but any new events will then appear in EventAppeared
-            //This is for information only (I think)
-            Console.WriteLine($"LiveProcessingStarted: Stream Name: [{obj.SubscriptionName}]");
-        }
-
-        private static Task EventAppeared(EventStoreCatchUpSubscription arg1,
-                                          ResolvedEvent arg2)
-        {
-            //The trick will be using our existing Event Appeared
-
-            Console.WriteLine($"EventAppeared: Subscription Name: {arg1.SubscriptionName} Event Number: {arg2.OriginalEventNumber}");
-
-            //NOTE: No Acking / Naking!
-
-            //NOTE: Me might offer a "parking" facility here - we could write the event to a stream (added in as part of the initial config for this catchup)
-
-            //throw new Exception("EventAppeared failed to deliver.");
-
-            return Task.CompletedTask;
+            await subscriptionService.StartCatchupSubscription(catchupSubscription, CancellationToken.None);
         }
 
         /// <summary>

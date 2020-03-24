@@ -8,15 +8,76 @@ namespace SubscriptionService.UnitTests
     using Shouldly;
     using Xunit;
 
+    /// <summary>
+    /// </summary>
     public class SubscriptionServiceBuilderTests
     {
+        #region Fields
+
+        /// <summary>
+        /// The event store connection mock
+        /// </summary>
         private readonly Mock<IEventStoreConnection> EventStoreConnectionMock;
 
+        #endregion
+
+        #region Constructors
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SubscriptionServiceBuilderTests" /> class.
+        /// </summary>
         public SubscriptionServiceBuilderTests()
         {
             this.EventStoreConnectionMock = new Mock<IEventStoreConnection>(MockBehavior.Strict);
         }
 
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Subscriptions the service builder build called subscription service created.
+        /// </summary>
+        [Fact]
+        public void SubscriptionServiceBuilder_BuildCalled_SubscriptionServiceCreated()
+        {
+            // 1. Arrange
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder();
+
+            // 2. Act
+            ISubscriptionService subscriptionService = subscriptionServiceBuilder.UseConnection(this.EventStoreConnectionMock.Object).Build();
+
+            // 3. Assert
+            subscriptionService.ShouldNotBeNull();
+        }
+
+        /// <summary>
+        /// Subscriptions the service builder build called and settings updated subscription service created.
+        /// </summary>
+        [Fact]
+        public void SubscriptionServiceBuilder_BuildCalledAndSettingsUpdated_SubscriptionServiceCreated()
+        {
+            // 1. Arrange
+            IEventFactory eventFactory = new TestEventFactory();
+            String username = "TestUser1";
+            String password = "TestPassword1";
+
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
+                                                                    .UseConnection(this.EventStoreConnectionMock.Object).LogAllEvents().LogEventsOnError()
+                                                                    .UseEventFactory(eventFactory).WithUserName(username).WithPassword(password);
+
+            // 2. Act
+            ISubscriptionService subscriptionService = subscriptionServiceBuilder.Build();
+
+            // 3. Assert
+            subscriptionService.ShouldNotBeNull();
+
+            //NOTE: Slight problem here, as we cant' check these value actually got pass into the SubscriptionService
+        }
+
+        /// <summary>
+        /// Subscriptions the service builder can be created is created.
+        /// </summary>
         [Fact]
         public void SubscriptionServiceBuilder_CanBeCreated_IsCreated()
         {
@@ -26,21 +87,9 @@ namespace SubscriptionService.UnitTests
             subscriptionServiceBuilder.ShouldNotBeNull();
         }
 
-        [Fact]
-        public void SubscriptionServiceBuilder_BuildCalled_SubscriptionServiceCreated()
-        {
-            // 1. Arrange
-            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder();
-
-            // 2. Act
-            ISubscriptionService subscriptionService = subscriptionServiceBuilder
-                                                       .UseConnection(this.EventStoreConnectionMock.Object)
-                                                       .Build();
-
-            // 3. Assert
-            subscriptionService.ShouldNotBeNull();
-        }
-
+        /// <summary>
+        /// Subscriptions the service builder default options are set are set.
+        /// </summary>
         [Fact]
         public void SubscriptionServiceBuilder_DefaultOptionsAreSet_AreSet()
         {
@@ -59,24 +108,9 @@ namespace SubscriptionService.UnitTests
             // 4. Cleanup
         }
 
-        [Fact]
-        public void SubscriptionServiceBuilder_SetUsernameAndPassword_ValuesUpdated()
-        {
-            // 1. Arrange
-            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder();
-            String username = "TestUser1";
-            String password = "TestPassword1";
-
-            // 2. Act
-            subscriptionServiceBuilder.WithUserName(username)
-                                      .WithPassword(password);
-
-            // 3. Assert
-            subscriptionServiceBuilder.Username.ShouldBe(username);
-            subscriptionServiceBuilder.Password.ShouldBe(password);
-        }
-
-
+        /// <summary>
+        /// Subscriptions the service builder set event factory values updated.
+        /// </summary>
         [Fact]
         public void SubscriptionServiceBuilder_SetEventFactory_ValuesUpdated()
         {
@@ -91,6 +125,9 @@ namespace SubscriptionService.UnitTests
             subscriptionServiceBuilder.EventFactory.ShouldBeOfType<TestEventFactory>();
         }
 
+        /// <summary>
+        /// Subscriptions the service builder set event logging values updated.
+        /// </summary>
         [Fact]
         public void SubscriptionServiceBuilder_SetEventLogging_ValuesUpdated()
         {
@@ -105,29 +142,25 @@ namespace SubscriptionService.UnitTests
             subscriptionServiceBuilder.LogEventsSettings.HasFlag(SubscriptionServiceBuilder.LogEvents.Errors).ShouldBeTrue();
         }
 
+        /// <summary>
+        /// Subscriptions the service builder set username and password values updated.
+        /// </summary>
         [Fact]
-        public void SubscriptionServiceBuilder_BuildCalledAndSettingsUpdated_SubscriptionServiceCreated()
+        public void SubscriptionServiceBuilder_SetUsernameAndPassword_ValuesUpdated()
         {
             // 1. Arrange
-            IEventFactory eventFactory = new TestEventFactory();
+            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder();
             String username = "TestUser1";
             String password = "TestPassword1";
 
-            SubscriptionServiceBuilder subscriptionServiceBuilder = new SubscriptionServiceBuilder()
-                .UseConnection(this.EventStoreConnectionMock.Object)
-                .LogAllEvents()
-                .LogEventsOnError()
-                .UseEventFactory(eventFactory)
-                .WithUserName(username)
-                .WithPassword(password);
-
             // 2. Act
-            ISubscriptionService subscriptionService = subscriptionServiceBuilder.Build();
+            subscriptionServiceBuilder.WithUserName(username).WithPassword(password);
 
             // 3. Assert
-            subscriptionService.ShouldNotBeNull();
-
-            //NOTE: Slight problem here, as we cant' check these value actually got pass into the SubscriptionService
+            subscriptionServiceBuilder.Username.ShouldBe(username);
+            subscriptionServiceBuilder.Password.ShouldBe(password);
         }
+
+        #endregion
     }
 }

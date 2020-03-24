@@ -7,7 +7,6 @@
     using ILogger = Microsoft.Extensions.Logging.ILogger;
 
     /// <summary>
-    /// 
     /// </summary>
     public sealed class SubscriptionServiceBuilder
     {
@@ -45,8 +44,10 @@
 
         #endregion
 
+        #region Constructors
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="SubscriptionServiceBuilder"/> class.
+        /// Initializes a new instance of the <see cref="SubscriptionServiceBuilder" /> class.
         /// </summary>
         public SubscriptionServiceBuilder()
         {
@@ -55,6 +56,8 @@
             this.Username = "admin";
             this.Password = "changeit";
         }
+
+        #endregion
 
         #region Methods
 
@@ -154,7 +157,6 @@
         #region Others
 
         /// <summary>
-        /// 
         /// </summary>
         [Flags]
         internal enum LogEvents

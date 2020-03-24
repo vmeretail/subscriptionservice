@@ -13,6 +13,7 @@
     <RepositoryType>GitHub</RepositoryType>
     <PackageTags>eventstore vme</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>

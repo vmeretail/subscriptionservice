@@ -31,6 +31,8 @@ namespace SubscriptionService.UnitTests
         /// The stream name
         /// </summary>
         public static String StreamName = "$ce-Sales";
+
+        public static String CatchupSubscriptionName1 = "Catchup Subscriotion 1";
         
         /// <summary>
         /// The stream start position

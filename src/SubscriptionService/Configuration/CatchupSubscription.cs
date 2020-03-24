@@ -14,20 +14,29 @@
         /// <param name="subscriptionName">Name of the subscription.</param>
         /// <param name="streamName">Name of the stream.</param>
         /// <param name="lastCheckpoint">The last checkpoint.</param>
+        /// <param name="endPointUri">The end point URI.</param>
         private CatchupSubscription(String subscriptionName,
                                     String streamName,
-                                    Int64? lastCheckpoint = null)
+                                    Int64? lastCheckpoint,
+                                    Uri endPointUri)
         {
             this.SubscriptionName = subscriptionName;
             this.StreamName = streamName;
             this.LastCheckpoint = lastCheckpoint;
+            this.EndPointUri = endPointUri;
         }
 
         #endregion
 
         #region Properties
 
-        //CatchUpSubscriptionSettings
+        /// <summary>
+        /// Gets the end point URI.
+        /// </summary>
+        /// <value>
+        /// The end point URI.
+        /// </value>
+        public Uri EndPointUri { get; }
 
         /// <summary>
         /// Gets the last checkpoint.
@@ -62,11 +71,13 @@
         /// </summary>
         /// <param name="subscriptionName">Name of the subscription.</param>
         /// <param name="streamName">Name of the stream.</param>
+        /// <param name="endPointUri">The end point URI.</param>
         /// <returns></returns>
         public static CatchupSubscription Create(String subscriptionName,
-                                                 String streamName)
+                                                 String streamName,
+                                                 Uri endPointUri)
         {
-            return new CatchupSubscription(subscriptionName, streamName);
+            return new CatchupSubscription(subscriptionName, streamName, null, endPointUri);
         }
 
         /// <summary>
@@ -75,12 +86,14 @@
         /// <param name="subscriptionName">Name of the subscription.</param>
         /// <param name="streamName">Name of the stream.</param>
         /// <param name="lastCheckpoint">The last checkpoint.</param>
+        /// <param name="endPointUri">The end point URI.</param>
         /// <returns></returns>
         public static CatchupSubscription Create(String subscriptionName,
                                                  String streamName,
-                                                 Int64 lastCheckpoint)
+                                                 Int64 lastCheckpoint,
+                                                 Uri endPointUri)
         {
-            return new CatchupSubscription(subscriptionName, streamName, lastCheckpoint);
+            return new CatchupSubscription(subscriptionName, streamName, lastCheckpoint, endPointUri);
         }
 
         #endregion

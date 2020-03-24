@@ -69,16 +69,6 @@
             //The user can make some changes (like adding headers)
             e.Headers.Add("Authorization", "Bearer someToken");
         }
-
-        /// <summary>
-        /// Subscriptions the service trace generated.
-        /// </summary>
-        /// <param name="trace">The trace.</param>
-        private static void SubscriptionService_TraceGenerated(String trace)
-        {
-            Console.WriteLine(trace);
-        }
-
         #endregion
     }
 }
