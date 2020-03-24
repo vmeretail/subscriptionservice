@@ -3,6 +3,8 @@
     using System;
     using System.Net.Http;
 
+
+
     /// <summary>
     /// </summary>
     internal class Subscription

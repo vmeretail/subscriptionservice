@@ -9,11 +9,13 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Configuration;
+    using Domain;
     using EventStore.ClientAPI;
     using EventStore.ClientAPI.SystemData;
     using Factories;
     using Microsoft.Extensions.Logging;
     using ILogger = Microsoft.Extensions.Logging.ILogger;
+    using Subscription = global::SubscriptionService.Configuration.Subscription;
 
     public class SubscriptionService : ISubscriptionService
     {
@@ -177,6 +179,8 @@
                                                     CatchUpSubscriptionSettings.Default.VerboseLogging,
                                                     catchupSubscription.SubscriptionName);
 
+                var consumer = new ConsumerBuilder().AddEndpointUri(catchupSubscription.);
+
 
                 Action<EventStoreCatchUpSubscription, ResolvedEvent> eventAppearedFromCatchupSubscription = async (eventStoreCatchUpSubscription,
                                                                                                                    resolvedEvent) =>
@@ -190,12 +194,14 @@
 
                 //NOTE: Different way to connect to stream
                 //NOTE: Could the UI be notified of this somehow
-                this.EventStoreConnection.SubscribeToStreamFrom(catchupSubscription.StreamName,
-                                                                catchupSubscription.LastCheckpoint,
-                                                                catchUpSubscriptionSettings,
-                                                                eventAppearedFromCatchupSubscription,
-                                                                LiveProcessingStarted,
-                                                                SubscriptionDropped);
+                EventStoreStreamCatchUpSubscription e = this.EventStoreConnection.SubscribeToStreamFrom(catchupSubscription.StreamName,
+                                                                                                        catchupSubscription.LastCheckpoint,
+                                                                                                        catchUpSubscriptionSettings,
+                                                                                                        eventAppearedFromCatchupSubscription,
+                                                                                                        LiveProcessingStarted,
+                                                                                                        SubscriptionDropped);
+
+                //TODO: Hold onto local EventStoreStreamCatchUpSubscription?
             }
 
             //TODO: Might want something a bit smarter to allow the user some understanding of what is actually running.
@@ -315,7 +321,7 @@
 
         private async Task EventAppearedFromCatchupSubscription(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,
                                                                 ResolvedEvent resolvedEvent,
-                                                                CatchupSubscription catchupSubscription,
+                                                                Consumer consumer ,
                                                                 CancellationToken cancellationToken)
         {
             //This is the entry point for emitted events from catchup subscriptions.
@@ -325,14 +331,19 @@
                 return;
             }
 
+            if (resolvedEvent.Event.EventType.StartsWith("$"))
+            {
+                return;
+            }
+
             //TODO: we will eventually handle parked / dead letter events here.
 
-            await EventAppeared(resolvedEvent, catchupSubscription, cancellationToken);
+            await EventAppeared(resolvedEvent, consumer, cancellationToken);
         }
 
 
-        private async Task EventAppeared(ResolvedEvent resolvedEvent, 
-                                         Domain.Subscription subscriptionConfiguration, 
+        private async Task EventAppeared(ResolvedEvent resolvedEvent,
+                                         Consumer consumer, 
                                          CancellationToken cancellationToken)
         {
            
@@ -368,8 +379,8 @@
                 HttpRequestMessage request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new StringContent(serialisedEvent, Encoding.UTF8, "application/json"),
-                    RequestUri = subscriptionConfiguration.EndPointUri
+                    Content = consumer.GetContent(serialisedEvent),
+                    RequestUri = consumer.GetUri()
                 };
 
                 if (this.OnEventAppeared != null)
@@ -384,7 +395,7 @@
                     this.Logger.LogInformation($"Event Id {resolvedEvent.Event.EventId} - Using default Event Appeared");
                 }
 
-                HttpClient httpClient = subscriptionConfiguration.HttpClient;
+                HttpClient httpClient = consumer.GetHttpClient();
 
                 HttpResponseMessage postTask = await httpClient.SendAsync(request, cancellationToken);
 
@@ -413,7 +424,7 @@
 
         private async Task EventAppearedForPersistentSubscription(EventStorePersistentSubscriptionBase subscription,
                                          ResolvedEvent resolvedEvent,
-                                         Domain.Subscription subscriptionConfiguration,
+                                         Consumer consumer,
                                          CancellationToken cancellationToken)
         {
             CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -432,7 +443,7 @@
                     return;
                 }
 
-                await EventAppeared(resolvedEvent, subscriptionConfiguration, cancellationToken);
+                await EventAppeared(resolvedEvent, consumer, cancellationToken);
 
                 //If we reach here, safe to ACK
                 subscription.Acknowledge(resolvedEvent);
