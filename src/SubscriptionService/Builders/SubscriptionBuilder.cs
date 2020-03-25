@@ -1,6 +1,7 @@
 ﻿namespace SubscriptionService.Builders
 {
     using System;
+    using System.Net.Http;
     using EventStore.ClientAPI;
     using Factories;
     using Microsoft.Extensions.Logging.Abstractions;
@@ -22,6 +23,14 @@
         /// </summary>
         internal IEventStoreConnection EventStoreConnection;
 
+        /// <summary>
+        /// The HTTP request interceptor
+        /// </summary>
+        internal Action<HttpRequestMessage> HttpRequestInterceptor;
+
+        /// <summary>
+        /// The log events settings
+        /// </summary>
         internal LogEvents LogEventsSettings;
 
         /// <summary>
@@ -34,6 +43,9 @@
         /// </summary>
         internal String Password;
 
+        /// <summary>
+        /// The URI
+        /// </summary>
         internal Uri Uri;
 
         /// <summary>
@@ -59,30 +71,6 @@
         #endregion
 
         #region Methods
-
-        //TODO: Add EventAppeared event handler
-
-        internal SubscriptionBuilder DeliverTo(Uri uri)
-        {
-            //TODO: Will we allow multiple endpoints?
-            //Eventually can post in more info like a methods to add headers onto REST etc
-
-            this.Uri = uri;
-
-            return this;
-        }
-
-        /// <summary>
-        /// Adds the logger.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <returns></returns>
-        internal SubscriptionBuilder AddLogger(ILogger logger)
-        {
-            this.Logger = logger;
-
-            return this;
-        }
 
         /// <summary>
         /// Builds this instance.
@@ -111,18 +99,6 @@
         public SubscriptionBuilder LogEventsOnError()
         {
             this.LogEventsSettings |= LogEvents.Errors;
-
-            return this;
-        }
-
-        /// <summary>
-        /// Uses the connection.
-        /// </summary>
-        /// <param name="eventStoreConnection">The event store connection.</param>
-        /// <returns></returns>
-        internal SubscriptionBuilder UseConnection(IEventStoreConnection eventStoreConnection)
-        {
-            this.EventStoreConnection = eventStoreConnection;
 
             return this;
         }
@@ -160,6 +136,54 @@
         {
             this.Username = username;
 
+            return this;
+        }
+
+        /// <summary>
+        /// Adds the logger.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <returns></returns>
+        internal SubscriptionBuilder AddLogger(ILogger logger)
+        {
+            this.Logger = logger;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Delivers to.
+        /// </summary>
+        /// <param name="uri">The URI.</param>
+        /// <returns></returns>
+        internal SubscriptionBuilder DeliverTo(Uri uri)
+        {
+            //TODO: Will we allow multiple endpoints? - raise an issue
+            this.Uri = uri;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Uses the connection.
+        /// </summary>
+        /// <param name="eventStoreConnection">The event store connection.</param>
+        /// <returns></returns>
+        internal SubscriptionBuilder UseConnection(IEventStoreConnection eventStoreConnection)
+        {
+            this.EventStoreConnection = eventStoreConnection;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Uses the HTTP interceptor.
+        /// </summary>
+        /// <param name="httpRequestInterceptor">The HTTP request interceptor.</param>
+        /// <returns></returns>
+        internal SubscriptionBuilder UseHttpInterceptor(Action<HttpRequestMessage> httpRequestInterceptor)
+        {
+            this.HttpRequestInterceptor = httpRequestInterceptor;
             return this;
         }
 

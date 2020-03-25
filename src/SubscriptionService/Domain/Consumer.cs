@@ -39,7 +39,7 @@
         /// <returns></returns>
         public HttpContent GetContent(String data)
         {
-            //TODO: This should make to easier to change the content we send to a consumer.
+            //This should make to easier to change the content we send to a consumer.
             StringContent stringContent = new StringContent(data, Encoding.UTF8, "application/json");
 
             return stringContent;

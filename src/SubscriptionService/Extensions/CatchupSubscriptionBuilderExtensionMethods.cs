@@ -1,6 +1,7 @@
 ﻿namespace SubscriptionService.Extensions
 {
     using System;
+    using System.Net.Http;
     using Builders;
     using EventStore.ClientAPI;
     using Factories;
@@ -33,9 +34,6 @@
         public static CatchupSubscriptionBuilder DeliverTo(this CatchupSubscriptionBuilder catchupSubscriptionBuilder,
                                                            Uri uri)
         {
-            //TODO: Will we allow multiple endpoints?
-            //Eventually can post in more info like a methods to add headers onto REST etc
-
             return catchupSubscriptionBuilder.DeliverTo(uri) as CatchupSubscriptionBuilder;
         }
 
@@ -81,6 +79,12 @@
                                                                  IEventFactory eventFactory)
         {
             return catchupSubscriptionBuilder.UseEventFactory(eventFactory) as CatchupSubscriptionBuilder;
+        }
+
+        public static CatchupSubscriptionBuilder UseHttpInterceptor(this CatchupSubscriptionBuilder catchupSubscriptionBuilder,
+                                                                    Action<HttpRequestMessage> httpRequestInterceptor)
+        {
+            return catchupSubscriptionBuilder.UseHttpInterceptor(httpRequestInterceptor) as CatchupSubscriptionBuilder;
         }
 
         /// <summary>

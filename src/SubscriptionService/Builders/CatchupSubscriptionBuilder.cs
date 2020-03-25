@@ -17,15 +17,29 @@
         internal CatchUpSubscriptionSettings CatchUpSubscriptionSettings;
 
         /// <summary>
+        /// The event appeared
+        /// </summary>
+        internal Action<EventStoreCatchUpSubscription, ResolvedEvent> EventAppeared;
+
+        /// <summary>
         /// The last checkpoint
         /// </summary>
         internal Int64? LastCheckpoint;
+
+        /// <summary>
+        /// The live processing started
+        /// </summary>
+        internal Action<EventStoreCatchUpSubscription> LiveProcessingStarted;
 
         /// <summary>
         /// The stream name
         /// </summary>
         internal String StreamName;
 
+        /// <summary>
+        /// The subscription dropped
+        /// </summary>
+        internal Action<EventStoreCatchUpSubscription, SubscriptionDropReason, Exception> SubscriptionDropped;
 
         #endregion
 
@@ -41,25 +55,45 @@
             this.CatchUpSubscriptionSettings = CatchUpSubscriptionSettings.Default;
         }
 
-
         #endregion
 
         #region Methods
 
-        //TODO: Add Subscription Dropped event handler
-        //TODO: Add Live processing event handler
-
-        public CatchupSubscriptionBuilder AddSubscriptionDroppedHandler(Action subscriptionDropped)
+        /// <summary>
+        /// Adds the event appeared handler.
+        /// </summary>
+        /// <param name="eventAppeared">The event appeared.</param>
+        /// <returns></returns>
+        public CatchupSubscriptionBuilder AddEventAppearedHandler(Action<EventStoreCatchUpSubscription, ResolvedEvent> eventAppeared)
         {
-            //TODO: This will override the default wiring
-            this.SubscriptionDropped = subscriptionDropped;
+            this.EventAppeared = eventAppeared;
 
             return this;
         }
 
+        /// <summary>
+        /// Adds the live processing started handler.
+        /// </summary>
+        /// <param name="liveProcessingStarted">The live processing started.</param>
+        /// <returns></returns>
+        public CatchupSubscriptionBuilder AddLiveProcessingStartedHandler(Action<EventStoreCatchUpSubscription> liveProcessingStarted)
+        {
+            this.LiveProcessingStarted = liveProcessingStarted;
+            return this;
+        }
 
+        /// <summary>
+        /// Adds the subscription dropped handler.
+        /// </summary>
+        /// <param name="subscriptionDropped">The subscription dropped.</param>
+        /// <returns></returns>
+        public CatchupSubscriptionBuilder AddSubscriptionDroppedHandler(Action<EventStoreCatchUpSubscription, SubscriptionDropReason, Exception> subscriptionDropped)
+        {
+            //This will override the default wiring.
+            this.SubscriptionDropped = subscriptionDropped;
 
-        internal Action SubscriptionDropped;
+            return this;
+        }
 
         /// <summary>
         /// Creates the specified stream name.
