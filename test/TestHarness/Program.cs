@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Net.Http;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
@@ -15,7 +16,7 @@
     using NLog.Config;
     using NLog.Extensions.Logging;
     using ILogger = Microsoft.Extensions.Logging.ILogger;
-
+    using Subscription = SubscriptionService.Configuration.Subscription;
 
     /// <summary>
     /// </summary>
@@ -62,14 +63,40 @@
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
 
-            Microsoft.Extensions.Logging.ILogger logger = new LoggerFactory().AddNLog().CreateLogger("CatchupLogger");
+            ILogger logger = new LoggerFactory().CreateLogger("CatchupLogger");
 
-            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder().UseConnection(eventStoreConnection).AddLogger(logger).Build();
+            var subscription = CatchupSubscriptionBuilder.Create("$ce-OrderAggregate").SetName("Test Catchup 1").SetLastCheckpoint(5000)
+                                                         .UseConnection(eventStoreConnection).AddLogger(logger).Build();
 
-            Uri uri = new Uri("https://envfx96fll0ja.x.pipedream.net");
-            CatchupSubscription  catchupSubscription= CatchupSubscription.Create("Test Catchup1", "$ce-CatchupTest", 4,uri);
+           await subscription.Start(CancellationToken.None);
 
-            await subscriptionService.StartCatchupSubscription(catchupSubscription, CancellationToken.None);
+            //ISubscriptionService subscriptionService = new SubscriptionServiceBuilder().UseConnection(eventStoreConnection).AddLogger(logger).Build();
+
+            //Uri uri = new Uri("https://envfx96fll0ja.x.pipedream.net");
+            //CatchupSubscription  catchupSubscription= CatchupSubscription.Create("Test Catchup1", "$ce-OrderAggregate", uri);
+            
+            //TODO: Do we need a different version of this for catchups?
+            //It's possible the caller wants to update "lastCheckpoint" at this stage or would we inject that (like the proposed parked stuff?)
+        //    subscriptionService.OnEventAppeared += SubscriptionService_OnEventAppeared;
+
+        //    subscriptionService.OnCatchupSubscriptionDropped += (sender, e) =>
+        //                                                        {
+        //                                                            SubscriptionService_OnCatchupSubscriptionDropped(eventStoreConnection, subscriptionService, sender, e);
+        //                                                        };
+
+        //    await subscriptionService.StartCatchupSubscription(catchupSubscription, CancellationToken.None);
+        }
+
+        private static void SubscriptionService_OnCatchupSubscriptionDropped(IEventStoreConnection eventStoreConnection, ISubscriptionService subscriptionService,object sender, EventArgs e)
+        {
+            Console.WriteLine("Closing connection");
+
+            //This seems to be the only way to stop the catchup subscription!
+            eventStoreConnection.Close();
+
+            ((SubscriptionService)subscriptionService).Stopwatch.Stop();
+
+            Console.WriteLine($"{DateTime.UtcNow}: Time to stop was {((SubscriptionService)subscriptionService).Stopwatch.ElapsedMilliseconds} on managed thread{ Thread.CurrentThread.ManagedThreadId}");
         }
 
         /// <summary>

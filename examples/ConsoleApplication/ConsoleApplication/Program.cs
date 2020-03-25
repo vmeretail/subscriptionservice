@@ -8,6 +8,7 @@
     using EventStore.ClientAPI;
     using SubscriptionService;
     using SubscriptionService.Configuration;
+    using Subscription = SubscriptionService.Configuration.Subscription;
 
     internal class Program
     {

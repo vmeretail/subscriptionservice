@@ -10,6 +10,7 @@ namespace Core3WorkerServiceExample
     using Microsoft.Extensions.Logging;
     using SubscriptionService;
     using SubscriptionService.Configuration;
+    using Subscription = SubscriptionService.Configuration.Subscription;
 
     public class Worker : BackgroundService
     {

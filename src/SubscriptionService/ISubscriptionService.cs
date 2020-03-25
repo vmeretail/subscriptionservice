@@ -30,6 +30,8 @@
         /// </summary>
         event EventHandler<HttpRequestMessage> OnEventAppeared;
 
+        event EventHandler OnCatchupSubscriptionDropped;
+
         #endregion
 
         #region Methods
@@ -51,7 +53,9 @@
         /// <param name="subscriptions">The subscriptions.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns></returns>
-        Task Start(List<Subscription> subscriptions,
+
+
+        Task Start(List<global::SubscriptionService.Configuration.Subscription> subscriptions,
                    CancellationToken cancellationToken);
 
         /// <summary>
