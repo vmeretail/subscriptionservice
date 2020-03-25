@@ -1,7 +1,6 @@
-﻿namespace SubscriptionService
+﻿namespace SubscriptionService.Builders
 {
     using System;
-    using System.Dynamic;
     using EventStore.ClientAPI;
     using Factories;
     using Microsoft.Extensions.Logging.Abstractions;
@@ -9,7 +8,7 @@
 
     /// <summary>
     /// </summary>
-    public sealed class SubscriptionServiceBuilder
+    public abstract class SubscriptionBuilder
     {
         #region Fields
 
@@ -23,9 +22,6 @@
         /// </summary>
         internal IEventStoreConnection EventStoreConnection;
 
-        /// <summary>
-        /// The log events settings
-        /// </summary>
         internal LogEvents LogEventsSettings;
 
         /// <summary>
@@ -38,6 +34,8 @@
         /// </summary>
         internal String Password;
 
+        internal Uri Uri;
+
         /// <summary>
         /// The username
         /// </summary>
@@ -48,9 +46,9 @@
         #region Constructors
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SubscriptionServiceBuilder" /> class.
+        /// Initializes a new instance of the <see cref="SubscriptionBuilder" /> class.
         /// </summary>
-        public SubscriptionServiceBuilder()
+        internal SubscriptionBuilder()
         {
             this.Logger = NullLogger.Instance;
             this.EventFactory = Factories.EventFactory.Create();
@@ -58,16 +56,33 @@
             this.Password = "changeit";
         }
 
+        //internal static SubscriptionBuilder Create()
+        //{
+        //    return new SubscriptionBuilder();
+        //}
+
         #endregion
 
         #region Methods
+
+        //TODO: Add EventAppeared event handler
+
+        public SubscriptionBuilder DeliverTo(Uri uri)
+        {
+            //TODO: Will we allow multiple endpoints?
+            //Eventually can post in more info like a methods to add headers onto REST etc
+
+            this.Uri = uri;
+
+            return this;
+        }
 
         /// <summary>
         /// Adds the logger.
         /// </summary>
         /// <param name="logger">The logger.</param>
         /// <returns></returns>
-        public SubscriptionServiceBuilder AddLogger(ILogger logger)
+        public SubscriptionBuilder AddLogger(ILogger logger)
         {
             this.Logger = logger;
 
@@ -78,16 +93,17 @@
         /// Builds this instance.
         /// </summary>
         /// <returns></returns>
-        public ISubscriptionService Build()
+        public virtual Subscription Build()
         {
-            return new SubscriptionService(this);
+            //TODO: Change
+            return new Subscription(this);
         }
 
         /// <summary>
         /// Logs the events.
         /// </summary>
         /// <returns></returns>
-        public SubscriptionServiceBuilder LogAllEvents()
+        public SubscriptionBuilder LogAllEvents()
         {
             this.LogEventsSettings |= LogEvents.All;
 
@@ -98,7 +114,7 @@
         /// Logs the events on error.
         /// </summary>
         /// <returns></returns>
-        public SubscriptionServiceBuilder LogEventsOnError()
+        public SubscriptionBuilder LogEventsOnError()
         {
             this.LogEventsSettings |= LogEvents.Errors;
 
@@ -110,7 +126,7 @@
         /// </summary>
         /// <param name="eventStoreConnection">The event store connection.</param>
         /// <returns></returns>
-        public SubscriptionServiceBuilder UseConnection(IEventStoreConnection eventStoreConnection)
+        internal SubscriptionBuilder UseConnection(IEventStoreConnection eventStoreConnection)
         {
             this.EventStoreConnection = eventStoreConnection;
 
@@ -122,7 +138,7 @@
         /// </summary>
         /// <param name="eventFactory">The event factory.</param>
         /// <returns></returns>
-        public SubscriptionServiceBuilder UseEventFactory(IEventFactory eventFactory)
+        public SubscriptionBuilder UseEventFactory(IEventFactory eventFactory)
         {
             this.EventFactory = eventFactory;
 
@@ -134,7 +150,7 @@
         /// </summary>
         /// <param name="password">The password.</param>
         /// <returns></returns>
-        public SubscriptionServiceBuilder WithPassword(String password)
+        public SubscriptionBuilder WithPassword(String password)
         {
             this.Password = password;
 
@@ -146,7 +162,7 @@
         /// </summary>
         /// <param name="username">The username.</param>
         /// <returns></returns>
-        public SubscriptionServiceBuilder WithUserName(String username)
+        public SubscriptionBuilder WithUserName(String username)
         {
             this.Username = username;
 

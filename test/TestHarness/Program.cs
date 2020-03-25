@@ -15,6 +15,7 @@
     using NLog;
     using NLog.Config;
     using NLog.Extensions.Logging;
+    using SubscriptionService.Builders;
     using ILogger = Microsoft.Extensions.Logging.ILogger;
     using Subscription = SubscriptionService.Configuration.Subscription;
 
@@ -65,8 +66,15 @@
 
             ILogger logger = new LoggerFactory().CreateLogger("CatchupLogger");
 
-            var subscription = CatchupSubscriptionBuilder.Create("$ce-OrderAggregate").SetName("Test Catchup 1").SetLastCheckpoint(5000)
-                                                         .UseConnection(eventStoreConnection).AddLogger(logger).Build();
+            Uri uri = new Uri("https://envfx96fll0ja.x.pipedream.net");
+
+            var subscription = CatchupSubscriptionBuilder.Create("$ce-OrderAggregate")
+                                                         .SetName("Test Catchup 1")
+                                                         .SetLastCheckpoint(5000)
+                                                         .UseConnection(eventStoreConnection)
+                                                         .AddSubscriptionDroppedHandler(() => {Console.WriteLine("Subscription Dropped");})
+                                                         .DeliverTo(uri)
+                                                         .AddLogger(logger).Build();
 
            await subscription.Start(CancellationToken.None);
 
