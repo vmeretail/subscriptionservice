@@ -56,18 +56,13 @@
             this.Password = "changeit";
         }
 
-        //internal static SubscriptionBuilder Create()
-        //{
-        //    return new SubscriptionBuilder();
-        //}
-
         #endregion
 
         #region Methods
 
         //TODO: Add EventAppeared event handler
 
-        public SubscriptionBuilder DeliverTo(Uri uri)
+        internal SubscriptionBuilder DeliverTo(Uri uri)
         {
             //TODO: Will we allow multiple endpoints?
             //Eventually can post in more info like a methods to add headers onto REST etc
@@ -82,7 +77,7 @@
         /// </summary>
         /// <param name="logger">The logger.</param>
         /// <returns></returns>
-        public SubscriptionBuilder AddLogger(ILogger logger)
+        internal SubscriptionBuilder AddLogger(ILogger logger)
         {
             this.Logger = logger;
 
@@ -95,7 +90,6 @@
         /// <returns></returns>
         public virtual Subscription Build()
         {
-            //TODO: Change
             return new Subscription(this);
         }
 

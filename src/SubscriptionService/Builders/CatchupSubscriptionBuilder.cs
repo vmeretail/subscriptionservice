@@ -3,15 +3,6 @@
     using System;
     using EventStore.ClientAPI;
 
-    public static class CatchupSubscriptionBuilderExtensionMethods
-    {
-        public static CatchupSubscriptionBuilder UseConnection(this CatchupSubscriptionBuilder catchupSubscriptionBuilder,
-                                                               IEventStoreConnection eventStoreConnection)
-        {
-            return catchupSubscriptionBuilder.UseConnection(eventStoreConnection) as CatchupSubscriptionBuilder;
-        }
-    }
-
     /// <summary>
     /// </summary>
     /// <seealso cref="SubscriptionService.Builders.SubscriptionBuilder" />
@@ -46,8 +37,6 @@
         /// <param name="streamName">Name of the stream.</param>
         private CatchupSubscriptionBuilder(String streamName)
         {
-
-
             this.StreamName = streamName;
             this.CatchUpSubscriptionSettings = CatchUpSubscriptionSettings.Default;
         }
@@ -60,13 +49,10 @@
         //TODO: Add Subscription Dropped event handler
         //TODO: Add Live processing event handler
 
-        //private async void SubscriptionDropped(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,
-        //                                       SubscriptionDropReason subscriptionDropReason,
-        //                                       Exception e)
-
         public CatchupSubscriptionBuilder AddSubscriptionDroppedHandler(Action subscriptionDropped)
         {
-            //this.SubscriptionDropped = subscriptionDropped;
+            //TODO: This will override the default wiring
+            this.SubscriptionDropped = subscriptionDropped;
 
             return this;
         }
