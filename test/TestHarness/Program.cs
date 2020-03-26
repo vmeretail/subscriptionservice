@@ -1,8 +1,6 @@
 ﻿namespace TestHarness
 {
     using System;
-    using System.Collections.Generic;
-    using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
@@ -18,40 +16,6 @@
     {
         #region Methods
 
-        private static async Task PersistentTest()
-        {
-            String connectionString = "ConnectTo=tcp://admin:changeit@staging2.eposity.com:1113;VerboseLogging=true;";
-
-            IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
-            await eventStoreConnection.ConnectAsync();
-
-            ILogger logger = new LoggerFactory().CreateLogger("CatchupLogger");
-
-            //RequestBin
-            Uri uri = new Uri("https://ennxdwa7hkx8e.x.pipedream.net/");
-
-            var builder = PersistentSubscriptionBuilder.Create("$ce-CatchupTest", "Persistent Test 1")
-                                                       .UseConnection(eventStoreConnection)
-                                                       .AddEventAppearedHandler((@base,
-                                                                                 @event) =>
-                                                                                {
-                                                                                    Console.WriteLine("Override EventAppeared called.");
-                                                                                })
-                                                       .AutoAckEvents()
-                                                       .DeliverTo(uri)
-                                                       .UseHttpInterceptor(message =>
-                                                                           {
-                                                                               //The user can make some changes (like adding headers)
-                                                                               message.Headers.Add("Authorization", "Bearer someToken");
-                                                                           })
-                                                       .AddLogger(logger);
-
-            var subscription = builder.Build();
-
-            await subscription.Start(CancellationToken.None);
-        }
-
-
         private static async Task CatchupTest()
         {
             String connectionString = "ConnectTo=tcp://admin:changeit@staging2.eposity.com:1113;VerboseLogging=true;";
@@ -66,14 +30,13 @@
 
             //TODO:
             //1. Simple example of writing lastCheckpoint - EventHasBeenProcessed
-            //2. Persistent Subscription needs implemented
             //3. We will eventually handle parked / dead letter events here inside EventAppearedFromCatchupSubscription
             //4. Signal catchup has been set to Stop and stop accepting anymore
             //5. remove Console.WriteLine
             //6. Stop persistent subscription
+            //7. Stream Start position for persistent
 
-            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-CatchupTest")
-                                                                  .SetName("Test Catchup 1")
+            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-CatchupTest").SetName("Test Catchup 1")
                                                                   //.SetLastCheckpoint(5000)
                                                                   .UseConnection(eventStoreConnection)
                                                                   //.AddLiveProcessingStartedHandler(upSubscription =>
@@ -92,14 +55,11 @@
                                                                   //                                    Console.WriteLine("Override SubscriptionDropped");
                                                                   //                                }
                                                                   //                                ) 
-                                                                  .DeliverTo(uri)
-                                                                  .UseHttpInterceptor(message =>
-                                                                                      {
-                                                                                          //The user can make some changes (like adding headers)
-                                                                                          message.Headers.Add("Authorization", "Bearer someToken");
-                                                                                      })
-                                                                  .AddLogger(logger)
-                                                                  .Build();
+                                                                  .DeliverTo(uri).UseHttpInterceptor(message =>
+                                                                                                     {
+                                                                                                         //The user can make some changes (like adding headers)
+                                                                                                         message.Headers.Add("Authorization", "Bearer someToken");
+                                                                                                     }).AddLogger(logger).Build();
 
             await subscription.Start(CancellationToken.None);
 
@@ -116,6 +76,37 @@
             await Program.PersistentTest();
 
             Console.ReadKey();
+        }
+
+        private static async Task PersistentTest()
+        {
+            String connectionString = "ConnectTo=tcp://admin:changeit@staging2.eposity.com:1113;VerboseLogging=true;";
+
+            IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
+            await eventStoreConnection.ConnectAsync();
+
+            ILogger logger = new LoggerFactory().CreateLogger("CatchupLogger");
+
+            //RequestBin
+            Uri uri = new Uri("https://ennxdwa7hkx8e.x.pipedream.net/");
+
+            PersistentSubscriptionBuilder builder = PersistentSubscriptionBuilder.Create("$ce-CatchupTest", "Persistent Test 1")
+                                                                                 .UseConnection(eventStoreConnection).AddEventAppearedHandler((@base,
+                                                                                                                                               @event) =>
+                                                                                                                                              {
+                                                                                                                                                  Console
+                                                                                                                                                      .WriteLine("Override EventAppeared called.");
+                                                                                                                                              }).AutoAckEvents()
+                                                                                 .DeliverTo(uri).UseHttpInterceptor(message =>
+                                                                                                                    {
+                                                                                                                        //The user can make some changes (like adding headers)
+                                                                                                                        message.Headers.Add("Authorization",
+                                                                                                                                            "Bearer someToken");
+                                                                                                                    }).AddLogger(logger);
+
+            Subscription subscription = builder.Build();
+
+            await subscription.Start(CancellationToken.None);
         }
 
         #endregion

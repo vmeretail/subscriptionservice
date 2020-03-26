@@ -446,6 +446,12 @@
             this.EventStoreStreamCatchUpSubscription.Stop();
         }
 
+        private void Stop(PersistentSubscriptionBuilder subscriptionBuilder)
+        {
+            //TODO: Review this
+            //this.EventStorePersistentSubscriptionBase.Stop(TimeSpan.FromSeconds(30));
+        }
+
         private async Task SubscriptionDropped(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,
                                                SubscriptionDropReason subscriptionDropReason,
                                                Exception e)
