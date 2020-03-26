@@ -161,7 +161,7 @@
             EventStoreDockerConfiguration esConfig = null;
             if (configurationList.ContainsKey(eventstoreVersion) == false)
             {
-                throw new Exception($"No eventstore configuration fount for version tag [{eventstoreVersion}]");
+                throw new Exception($"No eventstore configuration found for version tag [{eventstoreVersion}]");
             }
 
             esConfig = configurationList[eventstoreVersion];
