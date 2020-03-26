@@ -2,9 +2,6 @@ namespace SubscriptionService.UnitTests
 {
     using System;
     using System.Collections.Generic;
-    using Configuration;
-    using EventStore.ClientAPI;
-    using Factories;
 
     /// <summary>
     /// </summary>
@@ -12,16 +9,18 @@ namespace SubscriptionService.UnitTests
     {
         #region Fields
 
+        public static String CatchupSubscriptionName1 = "Catchup Subscription 1";
+
         /// <summary>
         /// The group name
         /// </summary>
         public static String GroupName = "Read Model";
-        
+
         /// <summary>
         /// The maximum retry count
         /// </summary>
         public static Int32 MaxRetryCount = 15;
-        
+
         /// <summary>
         /// The number of concurrent messages
         /// </summary>
@@ -32,8 +31,6 @@ namespace SubscriptionService.UnitTests
         /// </summary>
         public static String StreamName = "$ce-Sales";
 
-        public static String CatchupSubscriptionName1 = "Catchup Subscriotion 1";
-        
         /// <summary>
         /// The stream start position
         /// </summary>
@@ -44,20 +41,6 @@ namespace SubscriptionService.UnitTests
         /// </summary>
         public static String Url = @"http://127.0.0.1/api/events/";
 
-        /// <summary>
-        /// The subscriptions
-        /// </summary>
-        public static List<Subscription> Subscriptions = new List<Subscription>
-                                                         {
-                                                             Subscription.Create(TestData.StreamName,
-                                                                                 TestData.GroupName,
-                                                                                 TestData.Url,
-                                                                                 TestData.NumberOfConcurrentMessages,
-                                                                                 TestData.MaxRetryCount,
-                                                                                 TestData.StreamStartPosition)
-                                                         };
-
-        
 
         #endregion
     }

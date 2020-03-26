@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SubscriptionService\SubscriptionService.csproj" />
+    <ProjectReference Include="..\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj" />
   </ItemGroup>
 
 

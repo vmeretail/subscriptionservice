@@ -7,7 +7,6 @@
     using Builders;
     using Domain;
     using EventStore.ClientAPI;
-    using EventStore.ClientAPI.SystemData;
     using Factories;
     using Microsoft.Extensions.Logging;
     using ILogger = Microsoft.Extensions.Logging.ILogger;
@@ -18,12 +17,17 @@
     {
         #region Fields
 
-        internal EventStoreStreamCatchUpSubscription EventStoreStreamCatchUpSubscription;
+        /// <summary>
+        /// The event store persistent subscription base
+        /// </summary>
+        internal EventStorePersistentSubscriptionBase EventStorePersistentSubscriptionBase;
+
+        //TODO: Could we make the two base types a generic?
 
         /// <summary>
-        /// The default user credentials
+        /// The event store stream catch up subscription
         /// </summary>
-        private UserCredentials DefaultUserCredentials;
+        internal EventStoreStreamCatchUpSubscription EventStoreStreamCatchUpSubscription;
 
         /// <summary>
         /// The event factory
@@ -81,9 +85,6 @@
             this.EventStoreConnection = subscriptionBuilder.EventStoreConnection;
             this.Logger = subscriptionBuilder.Logger;
 
-            // Cache the user credentials
-            this.DefaultUserCredentials = new UserCredentials(subscriptionBuilder.Username, subscriptionBuilder.Password);
-
             this.LogEventsSettings = subscriptionBuilder.LogEventsSettings;
         }
 
@@ -91,17 +92,28 @@
 
         #region Properties
 
+        /// <summary>
+        /// Gets or sets a value indicating whether this instance is started.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance is started; otherwise, <c>false</c>.
+        /// </value>
         public Boolean IsStarted { get; set; }
 
         #endregion
 
         #region Methods
 
+        /// <summary>
+        /// Starts the specified cancellation token.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <exception cref="InvalidOperationException">Subscription already started.</exception>
         public async Task Start(CancellationToken cancellationToken)
         {
             if (this.IsStarted)
             {
-                throw new InvalidOperationException($"Subscription already started.");
+                throw new InvalidOperationException("Subscription already started.");
             }
 
             //TODO: Fix trace
@@ -113,6 +125,9 @@
             this.IsStarted = true;
         }
 
+        /// <summary>
+        /// Stops this instance.
+        /// </summary>
         public void Stop()
         {
             this.IsStarted = false;
@@ -120,6 +135,13 @@
             this.Stop((dynamic)this.SubscriptionBuilder);
         }
 
+        /// <summary>
+        /// Events the appeared.
+        /// </summary>
+        /// <param name="resolvedEvent">The resolved event.</param>
+        /// <param name="consumer">The consumer.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <exception cref="Exception">Event Id {resolvedEvent.Event.EventId} - Response from server was {response}</exception>
         private async Task EventAppeared(ResolvedEvent resolvedEvent,
                                          Consumer consumer,
                                          CancellationToken cancellationToken)
@@ -206,7 +228,7 @@
                 // Cancel the call to the server
                 linkedTokenSource.Cancel();
 
-                if (this.LogEventsSettings.HasFlag(SubscriptionServiceBuilder.LogEvents.Errors))
+                if (this.LogEventsSettings.HasFlag(SubscriptionBuilder.LogEvents.Errors))
                 {
                     this.Logger.LogError(e, $"Exception has occured on EventAppeared with Event {serialisedEvent}");
                 }
@@ -215,7 +237,49 @@
             }
         }
 
-        /// <summary>Events the appeared from catchup subscription.</summary>
+        /// <summary>
+        /// Events the appeared for persistent subscription.
+        /// </summary>
+        /// <param name="subscription">The subscription.</param>
+        /// <param name="resolvedEvent">The resolved event.</param>
+        /// <param name="consumer">The consumer.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        private async Task EventAppearedForPersistentSubscription(EventStorePersistentSubscriptionBase subscription,
+                                                                  ResolvedEvent resolvedEvent,
+                                                                  Consumer consumer,
+                                                                  CancellationToken cancellationToken)
+        {
+            Boolean autoAck = ((PersistentSubscriptionBuilder)this.SubscriptionBuilder).AutoAck;
+
+            //TODO: Temp
+            Console.WriteLine($"{DateTime.UtcNow}: EventAppearedForPersistentSubscription  {resolvedEvent.OriginalEventNumber} on managed thread {Thread.CurrentThread.ManagedThreadId}");
+
+            try
+            {
+                await this.EventAppeared(resolvedEvent, consumer, cancellationToken);
+
+                if (autoAck == false)
+                {
+                    //If we reach here, safe to ACK
+                    subscription.Acknowledge(resolvedEvent);
+                }
+            }
+            catch(Exception e)
+            {
+                try
+                {
+                    subscription.Fail(resolvedEvent, PersistentSubscriptionNakEventAction.Retry, e.Message);
+                }
+                catch(Exception ex)
+                {
+                    this.Logger.LogError(ex, $"Exception has occured when NAKing event id {resolvedEvent.Event.EventId}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Events the appeared from catchup subscription.
+        /// </summary>
         /// <param name="eventStoreCatchUpSubscription">The event store catch up subscription.</param>
         /// <param name="resolvedEvent">The resolved event.</param>
         /// <param name="consumer">The consumer.</param>
@@ -233,7 +297,6 @@
             {
                 Console.WriteLine($"{DateTime.UtcNow}: EventAppearedFromCatchupSubscription Exception {resolvedEvent.OriginalEventNumber}({resolvedEvent.OriginalEvent.EventType}) on managed thread {Thread.CurrentThread.ManagedThreadId} {e.Message}");
 
-                
                 //TODO: Log out Subscription Name?
                 this.Logger.LogError(e, $"Exception occured from CatchupSubscription {resolvedEvent.Event.EventId}");
 
@@ -244,7 +307,9 @@
             }
         }
 
-        /// <summary>Lives the processing started.</summary>
+        /// <summary>
+        /// Lives the processing started.
+        /// </summary>
         /// <param name="eventStoreCatchUpSubscription">The event store catch up subscription.</param>
         private void LiveProcessingStarted(EventStoreCatchUpSubscription eventStoreCatchUpSubscription)
         {
@@ -305,9 +370,74 @@
                                                                                                        catchupSubscriptionBuilder.SubscriptionDropped);
         }
 
-        private void Start(PersistentSubscriptionBuilder catchupSubscriptionBuilder)
+        private async Task Start(PersistentSubscriptionBuilder persistentSubscriptionBuilder,
+                                 CancellationToken cancellationToken)
         {
-            //TODO:
+            ConsumerBuilder consumerBuilder = new ConsumerBuilder();
+            Consumer consumer = consumerBuilder.AddEndpointUri(persistentSubscriptionBuilder.Uri).Build();
+
+            if (persistentSubscriptionBuilder.EventAppeared == null)
+            {
+                //We wire up the default handler.
+                persistentSubscriptionBuilder.EventAppeared = EventAppearedAction;
+            }
+
+            if (persistentSubscriptionBuilder.SubscriptionDropped == null)
+            {
+                //TODO: -create body for default subscription dropped.
+                //We wire up the default handler.
+                persistentSubscriptionBuilder.SubscriptionDropped = (eventStorePersistentSubscriptionBase,
+                                                                     reason,
+                                                                     arg3) =>
+                                                                    {
+                                                                        Console.WriteLine("Default SubscriptionDropped called");
+                                                                    };
+            }
+
+            async void EventAppearedAction(EventStorePersistentSubscriptionBase eventStorePersistentSubscriptionBase,
+                                           ResolvedEvent resolvedEvent)
+            {
+                await this.EventAppearedForPersistentSubscription(eventStorePersistentSubscriptionBase, resolvedEvent, consumer, cancellationToken);
+            }
+
+            async Task ConnectToPersistentSubscriptionAsync()
+            {
+                //TODO: buffer
+                //Does BufferSize relate to a param in PersistentSubscriptionSettings?
+
+                this.EventStorePersistentSubscriptionBase = await this.EventStoreConnection.ConnectToPersistentSubscriptionAsync(persistentSubscriptionBuilder.StreamName,
+                                                                                                                                 persistentSubscriptionBuilder.GroupName,
+                                                                                                                                 persistentSubscriptionBuilder
+                                                                                                                                     .EventAppeared,
+                                                                                                                                 persistentSubscriptionBuilder
+                                                                                                                                     .SubscriptionDropped,
+                                                                                                                                 persistentSubscriptionBuilder
+                                                                                                                                     .UserCredentials,
+                                                                                                                                 autoAck:persistentSubscriptionBuilder
+                                                                                                                                     .AutoAck);
+            }
+
+            try
+            {
+                await ConnectToPersistentSubscriptionAsync();
+            }
+            catch(Exception e)
+            {
+                if (e.InnerException != null && e.InnerException.Message == "Subscription not found")
+                {
+                    //Create the Group
+                    await this.EventStoreConnection.CreatePersistentSubscriptionAsync(persistentSubscriptionBuilder.StreamName,
+                                                                                      persistentSubscriptionBuilder.GroupName,
+                                                                                      persistentSubscriptionBuilder.PersistentSubscriptionSettings,
+                                                                                      persistentSubscriptionBuilder.UserCredentials);
+
+                    await ConnectToPersistentSubscriptionAsync();
+                }
+                else
+                {
+                    throw;
+                }
+            }
         }
 
         private void Stop(CatchupSubscriptionBuilder catchupSubscriptionBuilder)

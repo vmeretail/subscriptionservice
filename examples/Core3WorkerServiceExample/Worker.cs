@@ -1,16 +1,12 @@
 namespace Core3WorkerServiceExample
 {
     using System;
-    using System.Collections.Generic;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
-    using SubscriptionService;
-    using SubscriptionService.Configuration;
-    using Subscription = SubscriptionService.Configuration.Subscription;
 
     public class Worker : BackgroundService
     {
@@ -26,17 +22,12 @@ namespace Core3WorkerServiceExample
         /// </summary>
         private readonly ILogger<Worker> Logger;
 
-        /// <summary>
-        /// The subscription service
-        /// </summary>
-        private ISubscriptionService SubscriptionService;
-
         #endregion
 
         #region Constructors
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Worker"/> class.
+        /// Initializes a new instance of the <see cref="Worker" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
         public Worker(ILogger<Worker> logger)
@@ -61,13 +52,19 @@ namespace Core3WorkerServiceExample
             this.Connection = EventStoreConnection.Create(Worker.EventStoreConnectionString);
             await this.Connection.ConnectAsync();
 
+            //TODO: Fix this
+
             // New up the Subscription Service instance via SubscriptionServiceBuilder
-            this.SubscriptionService = new SubscriptionServiceBuilder().UseConnection(this.Connection).UseEventFactory(new WorkerEventFactory()).Build();
+            //var subscription = PersistentSubscriptionBuilder.Create("$ce-TestStream", "TestGroup1")
+            //                                                .UseConnection(this.Connection)
+            //                                                .DeliverTo(new Uri("http://localhost/api/events"))
+            //                                                .UseEventFactory(new WorkerEventFactory())
+            //                                                .AddLogger(this.Logger)
+            //                                                .Build();
 
             // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 
             // adding a Authorization token onto the HTTP POST (as demonstrated below)
             // If there is no requirement to adjust the HTTP POST request then wiring up this event handler can be ommitted.
-            this.SubscriptionService.OnEventAppeared += this.SubscriptionService_OnEventAppeared;
 
             await base.StartAsync(cancellationToken);
         }
@@ -108,11 +105,13 @@ namespace Core3WorkerServiceExample
             // Stream Start Position - Position that the persistent subscription will start form, this will normally be zero but this value can be used to ignore events
             //                         in a stream for example the events are malformed so you wish not to process these
             this.Logger.LogInformation("About to Get Subscription Configuration");
-            List<Subscription> subscriptions = new List<Subscription>();
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages: 2, maxRetryCount: 1));
+            //List<Subscription> subscriptions = new List<Subscription>();
+            //subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages:2, maxRetryCount:1));
 
             // Start the subscription service, this will create and connect to the subscriptions defined in your configuration
-            await this.SubscriptionService.Start(subscriptions, stoppingToken);
+            //await this.SubscriptionService.Start(subscriptions, stoppingToken);
+
+            //TODO: make this work again!
         }
 
         /// <summary>
@@ -152,7 +151,7 @@ namespace Core3WorkerServiceExample
         /// <summary>
         /// The event store connection string
         /// This example assumes you have an event store running locally on the default ports with the default username and password
-        /// If your eventstore connection information is different then update this connection string variable to point to your event store        
+        /// If your eventstore connection information is different then update this connection string variable to point to your event store
         /// </summary>
         private const String EventStoreConnectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
 

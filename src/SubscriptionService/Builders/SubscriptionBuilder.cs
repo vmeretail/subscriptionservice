@@ -3,6 +3,7 @@
     using System;
     using System.Net.Http;
     using EventStore.ClientAPI;
+    using EventStore.ClientAPI.SystemData;
     using Factories;
     using Microsoft.Extensions.Logging.Abstractions;
     using ILogger = Microsoft.Extensions.Logging.ILogger;
@@ -38,20 +39,13 @@
         /// </summary>
         internal ILogger Logger;
 
-        /// <summary>
-        /// The password
-        /// </summary>
-        internal String Password;
+
 
         /// <summary>
         /// The URI
         /// </summary>
         internal Uri Uri;
 
-        /// <summary>
-        /// The username
-        /// </summary>
-        internal String Username;
 
         #endregion
 
@@ -64,8 +58,8 @@
         {
             this.Logger = NullLogger.Instance;
             this.EventFactory = Factories.EventFactory.Create();
-            this.Username = "admin";
-            this.Password = "changeit";
+
+            this.UserCredentials = new UserCredentials("admin","changeit");
         }
 
         #endregion
@@ -122,10 +116,12 @@
         /// <returns></returns>
         public SubscriptionBuilder WithPassword(String password)
         {
-            this.Password = password;
+            this.UserCredentials = new UserCredentials(this.UserCredentials.Username,password);
 
             return this;
         }
+
+        internal UserCredentials UserCredentials;
 
         /// <summary>
         /// Withes the name of the user.
@@ -134,7 +130,7 @@
         /// <returns></returns>
         public SubscriptionBuilder WithUserName(String username)
         {
-            this.Username = username;
+            this.UserCredentials = new UserCredentials(username,this.UserCredentials.Password); 
 
             return this;
         }
