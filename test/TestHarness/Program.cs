@@ -18,7 +18,7 @@
 
         private static async Task CatchupTest()
         {
-            String connectionString = "ConnectTo=tcp://admin:changeit@staging2.eposity.com:1113;VerboseLogging=true;";
+            String connectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
 
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
@@ -81,7 +81,7 @@
 
         private static async Task PersistentTest()
         {
-            String connectionString = "ConnectTo=tcp://admin:changeit@staging2.eposity.com:1113;VerboseLogging=true;";
+            String connectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
 
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
