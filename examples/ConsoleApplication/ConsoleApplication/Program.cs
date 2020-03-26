@@ -1,13 +1,13 @@
 ﻿namespace ConsoleApplication
 {
     using System;
-    using System.Collections.Generic;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
     using SubscriptionService;
-    using SubscriptionService.Configuration;
+    using SubscriptionService.Builders;
+    using SubscriptionService.Extensions;
 
     internal class Program
     {
@@ -32,6 +32,7 @@
             // update the Url below
             String endpointUrl = "https://enyx4bscr5t6k.x.pipedream.net/";
 
+            //TODO: Review the text
             // Setup a list of persistent subscription objects, each one of these will represent a Persistent Subscription in the Event Store - Competing Consumers tab
             // Each subscription allows the setting of the following values:
             // Stream Name - the name of the Stream that will be listened to for Events
@@ -41,19 +42,15 @@
             // Max Retry Count - Number of times that the message will be retried if the first POST to the endpoint fails before it is NAK'd and parked in Event Store
             // Stream Start Position - Position that the persistent subscription will start form, this will normally be zero but this value can be used to ignore events
             //                         in a stream for example the events are malformed so you wish not to process these
-            List<Subscription> subscriptions = new List<Subscription>();
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages:2, maxRetryCount:1));
+            //List<Subscription> subscriptions = new List<Subscription>();
+            //subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages:2, maxRetryCount:1));
 
             // Create instance of the class via the SubscriptionServiceBuilder
-            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder().UseConnection(eventStoreConnection).Build();
-
-            // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 
-            // adding a Authorization token onto the HTTP POST (as demonstrated below)
-            // If there is no requirement to adjust the HTTP POST request then wiring up this event handler can be ommitted.
-            subscriptionService.OnEventAppeared += Program.SubscriptionService_OnEventAppeared;
+            Subscription subscription = PersistentSubscriptionBuilder.Create("$ce-TestStream", "TestGroup").UseConnection(eventStoreConnection)
+                                                                     .DeliverTo(new Uri(endpointUrl)).Build();
 
             // Start the subscription service with the passed in configuration, this will create and connect to the subscriptions defined in your configuration
-            await subscriptionService.Start(subscriptions, CancellationToken.None);
+            await subscription.Start(CancellationToken.None);
 
             Console.ReadKey();
         }
@@ -68,15 +65,6 @@
         {
             //The user can make some changes (like adding headers)
             e.Headers.Add("Authorization", "Bearer someToken");
-        }
-
-        /// <summary>
-        /// Subscriptions the service trace generated.
-        /// </summary>
-        /// <param name="trace">The trace.</param>
-        private static void SubscriptionService_TraceGenerated(String trace)
-        {
-            Console.WriteLine(trace);
         }
 
         #endregion

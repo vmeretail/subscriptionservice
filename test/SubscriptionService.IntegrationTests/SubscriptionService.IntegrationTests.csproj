@@ -29,12 +29,13 @@
     </PackageReference>
 
 
-    <PackageReference Include="NLog" Version="4.7.0-rc1" />
+    <PackageReference Include="NLog" Version="4.7.0" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="4.9.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SubscriptionService\SubscriptionService.csproj" />
+    <ProjectReference Include="..\SubscriptionService.UnitTests\SubscriptionService.UnitTests.csproj" />
   </ItemGroup>
 
 

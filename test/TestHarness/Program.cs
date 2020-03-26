@@ -1,51 +1,20 @@
 ﻿namespace TestHarness
 {
     using System;
-    using System.Collections.Generic;
-    using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
+    using Microsoft.Extensions.Logging;
     using SubscriptionService;
-    using SubscriptionService.Configuration;
+    using SubscriptionService.Builders;
+    using SubscriptionService.Extensions;
+    using ILogger = Microsoft.Extensions.Logging.ILogger;
 
     /// <summary>
     /// </summary>
     internal class Program
     {
         #region Methods
-
-        /// <summary>
-        /// Defines the entry point of the application.
-        /// </summary>
-        /// <param name="args">The arguments.</param>
-        private static async Task Main(String[] args)
-        {
-            await CatchupTest();
-
-            Console.ReadKey();
-
-            String connectionString = "ConnectTo=tcp://admin:changeit@127.0.01:1113;VerboseLogging=true;";
-
-            IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
-            await eventStoreConnection.ConnectAsync();
-
-            List<Subscription> subscriptions = new List<Subscription>();
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", "https://enyaw1mc4if0j.x.pipedream.net/", 2, 1));
-            subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup1", "https://enr3vi91wr5c.x.pipedream.net/", 2, 1));
-            
-            ISubscriptionService subscriptionService = new SubscriptionServiceBuilder()
-                                                       .UseConnection(eventStoreConnection)
-                                                       .Build();
-
-            subscriptionService.OnEventAppeared += Program.SubscriptionService_OnEventAppeared;
-
-            await subscriptionService.Start(subscriptions, CancellationToken.None);
-
-            await subscriptionService.RemoveSubscription("TestGroup", "$ce-TestStream", CancellationToken.None);
-
-            Console.ReadKey();
-        }
 
         private static async Task CatchupTest()
         {
@@ -54,65 +23,91 @@
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
 
-            CatchUpSubscriptionSettings catchUpSubscriptionSettings = new CatchUpSubscriptionSettings(100,100,true,true,"Test Subscription 1");
+            ILogger logger = new LoggerFactory().CreateLogger("CatchupLogger");
 
-            //NOTE: Different way to connect to stream
-            //NOTE: Could the UI be notified of this somehow
-            eventStoreConnection.SubscribeToStreamFrom("$ce-CatchupTest",
-                                                       null,//this is the important part, remembering the lastCheckpoint
-                                                            //CatchUpSubscriptionSettings.Default, //Need to review these settings
-                                                       catchUpSubscriptionSettings,
-                                                       EventAppeared, //NOTE: The event appeared has some different arguments
-                                                       LiveProcessingStarted,
-                                                       SubscriptionDropped);
-        }
+            //RequestBin
+            Uri uri = new Uri("https://ennxdwa7hkx8e.x.pipedream.net/");
 
-        private static void SubscriptionDropped(EventStoreCatchUpSubscription arg1,
-                                                SubscriptionDropReason arg2,
-                                                Exception arg3)
-        {
-            //NOTE: What will we do here?
-            Console.WriteLine($"SubscriptionDropped: Stream Name: [{arg1.SubscriptionName}] Reason[{arg2}]");
+            //TODO:
+            //1. Simple example of writing lastCheckpoint - EventHasBeenProcessed
+            //3. We will eventually handle parked / dead letter events here inside EventAppearedFromCatchupSubscription
+            //4. Signal catchup has been set to Stop and stop accepting anymore
+            //5. remove Console.WriteLine
+            //6. Stop persistent subscription
+            //7. Stream Start position for persistent
+            //8. Multiple DeliverTo
 
-            Console.WriteLine("About to stop");
-            arg1.Stop();
+            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-CatchupTest").SetName("Test Catchup 1")
+                                                                  //.SetLastCheckpoint(5000)
+                                                                  .UseConnection(eventStoreConnection)
+                                                                  //.AddLiveProcessingStartedHandler(upSubscription =>
+                                                                  //                                 {
+                                                                  //                                     Console.WriteLine("Override LiveProcessingStarted");
+                                                                  //                                 } )
+                                                                  //.AddEventAppearedHandler((upSubscription,
+                                                                  //                          @event) =>{
+                                                                  //                             Console.WriteLine($"Override EventAppeared {@event.OriginalEventNumber}");
 
-            Console.WriteLine("After stop");
-        }
+                                                                  //                          })
+                                                                  //.AddSubscriptionDroppedHandler((upSubscription,
+                                                                  //                                 reason,
+                                                                  //                                 arg3) =>
+                                                                  //                                {
+                                                                  //                                    Console.WriteLine("Override SubscriptionDropped");
+                                                                  //                                }
+                                                                  //                                ) 
+                                                                  .DeliverTo(uri).UseHttpInterceptor(message =>
+                                                                                                     {
+                                                                                                         //The user can make some changes (like adding headers)
+                                                                                                         message.Headers.Add("Authorization", "Bearer someToken");
+                                                                                                     }).AddLogger(logger).Build();
 
-        private static void LiveProcessingStarted(EventStoreCatchUpSubscription obj)
-        {
-            //NOTE: Once we have caught up, this gets fired - but any new events will then appear in EventAppeared
-            //This is for information only (I think)
-            Console.WriteLine($"LiveProcessingStarted: Stream Name: [{obj.SubscriptionName}]");
-        }
+            await subscription.Start(CancellationToken.None);
 
-        private static Task EventAppeared(EventStoreCatchUpSubscription arg1,
-                                          ResolvedEvent arg2)
-        {
-            //The trick will be using our existing Event Appeared
-
-            Console.WriteLine($"EventAppeared: Subscription Name: {arg1.SubscriptionName} Event Number: {arg2.OriginalEventNumber}");
-
-            //NOTE: No Acking / Naking!
-
-            //NOTE: Me might offer a "parking" facility here - we could write the event to a stream (added in as part of the initial config for this catchup)
-
-            //throw new Exception("EventAppeared failed to deliver.");
-
-            return Task.CompletedTask;
+            //subscription.Stop();
         }
 
         /// <summary>
-        /// Subscriptions the service on event appeared.
+        /// Defines the entry point of the application.
         /// </summary>
-        /// <param name="sender">The sender.</param>
-        /// <param name="e">The e.</param>
-        private static void SubscriptionService_OnEventAppeared(Object sender,
-                                                                HttpRequestMessage e)
+        /// <param name="args">The arguments.</param>
+        private static async Task Main(String[] args)
         {
-            //The user can make some changes (like adding headers)
-            e.Headers.Add("Authorization", "Bearer someToken");
+            //await Program.CatchupTest();
+            await Program.PersistentTest();
+
+            Console.ReadKey();
+        }
+
+        private static async Task PersistentTest()
+        {
+            String connectionString = "ConnectTo=tcp://admin:changeit@staging2.eposity.com:1113;VerboseLogging=true;";
+
+            IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
+            await eventStoreConnection.ConnectAsync();
+
+            ILogger logger = new LoggerFactory().CreateLogger("CatchupLogger");
+
+            //RequestBin
+            Uri uri = new Uri("https://ennxdwa7hkx8e.x.pipedream.net/");
+
+            PersistentSubscriptionBuilder builder = PersistentSubscriptionBuilder.Create("$ce-CatchupTest", "Persistent Test 1")
+                                                                                 .UseConnection(eventStoreConnection).AddEventAppearedHandler((@base,
+                                                                                                                                               @event) =>
+                                                                                                                                              {
+                                                                                                                                                  Console
+                                                                                                                                                      .WriteLine("Override EventAppeared called.");
+                                                                                                                                              }).AutoAckEvents()
+                                                                                 .DeliverTo(uri).UseHttpInterceptor(message =>
+                                                                                                                    {
+                                                                                                                        //The user can make some changes (like adding headers)
+                                                                                                                        message.Headers.Add("Authorization",
+                                                                                                                                            "Bearer someToken");
+                                                                                                                    }).AddLogger(logger);
+
+            Subscription subscription = builder.Build();
+
+            await subscription.Start(CancellationToken.None);
         }
 
         #endregion
