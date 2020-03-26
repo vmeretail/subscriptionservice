@@ -1,4 +1,4 @@
-﻿namespace SubscriptionService
+﻿namespace SubscriptionService.Builders
 {
     using System;
     using System.Net.Http;

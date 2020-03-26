@@ -1,6 +1,7 @@
 namespace SubscriptionService.UnitTests
 {
     using System;
+    using Builders;
     using Domain;
     using Shouldly;
     using Xunit;

@@ -35,6 +35,7 @@
             //5. remove Console.WriteLine
             //6. Stop persistent subscription
             //7. Stream Start position for persistent
+            //8. Multiple DeliverTo
 
             Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-CatchupTest").SetName("Test Catchup 1")
                                                                   //.SetLastCheckpoint(5000)
