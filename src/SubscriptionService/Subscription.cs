@@ -13,7 +13,7 @@
 
     /// <summary>
     /// </summary>
-    public class Subscription
+    public sealed class Subscription
     {
         #region Fields
 
@@ -402,9 +402,6 @@
 
             async Task ConnectToPersistentSubscriptionAsync()
             {
-                //TODO: buffer
-                //Does BufferSize relate to a param in PersistentSubscriptionSettings?
-
                 this.EventStorePersistentSubscriptionBase = await this.EventStoreConnection.ConnectToPersistentSubscriptionAsync(persistentSubscriptionBuilder.StreamName,
                                                                                                                                  persistentSubscriptionBuilder.GroupName,
                                                                                                                                  persistentSubscriptionBuilder
@@ -413,6 +410,8 @@
                                                                                                                                      .SubscriptionDropped,
                                                                                                                                  persistentSubscriptionBuilder
                                                                                                                                      .UserCredentials,
+                                                                                                                                 persistentSubscriptionBuilder
+                                                                                                                                     .InFlightLimit,
                                                                                                                                  autoAck:persistentSubscriptionBuilder
                                                                                                                                      .AutoAck);
             }

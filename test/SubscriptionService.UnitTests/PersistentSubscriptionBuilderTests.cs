@@ -73,6 +73,31 @@ namespace SubscriptionService.UnitTests
             subscriptionBuilder.HttpRequestInterceptor.ShouldBeNull();
         }
 
+        [Fact]
+        public void PersistentSubscriptionBuilder_SetInFlightLimit_ValuesUpdated()
+        {
+            // 1. Arrange
+            Int32 inflightLimit = 500;
+            PersistentSubscriptionBuilder subscriptionBuilder = PersistentSubscriptionBuilder.Create(TestData.StreamName, TestData.GroupName);
+
+            // 2. Act
+            subscriptionBuilder.SetInFlightLimit(inflightLimit);
+            // 3. Assert
+            subscriptionBuilder.InFlightLimit.ShouldBe(inflightLimit);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void PersistentSubscriptionBuilder_SetInFlightLimitWithInvalidValues_ValuesNotUpdated(Int32 inflightLimit)
+        {
+            // 1. Arrange
+            PersistentSubscriptionBuilder subscriptionBuilder = PersistentSubscriptionBuilder.Create(TestData.StreamName, TestData.GroupName);
+
+            // 2. Act
+            Should.Throw<ArgumentOutOfRangeException>(() => subscriptionBuilder.SetInFlightLimit(inflightLimit));
+        }
+
         /// <summary>
         /// Persistents the subscription builder set event factory values updated.
         /// </summary>
