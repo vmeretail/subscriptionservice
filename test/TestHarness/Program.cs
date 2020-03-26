@@ -92,13 +92,16 @@
             Uri uri = new Uri("https://ennxdwa7hkx8e.x.pipedream.net/");
 
             PersistentSubscriptionBuilder builder = PersistentSubscriptionBuilder.Create("$ce-CatchupTest", "Persistent Test 1")
-                                                                                 .UseConnection(eventStoreConnection).AddEventAppearedHandler((@base,
+                                                                                 .UseConnection(eventStoreConnection)
+                                                                                 .AddEventAppearedHandler((@base,
                                                                                                                                                @event) =>
                                                                                                                                               {
                                                                                                                                                   Console
                                                                                                                                                       .WriteLine("Override EventAppeared called.");
                                                                                                                                               }).AutoAckEvents()
-                                                                                 .DeliverTo(uri).UseHttpInterceptor(message =>
+                                                                                 .DeliverTo(uri)
+                                                                                 .SetInFlightLimit(10)
+                                                                                 .UseHttpInterceptor(message =>
                                                                                                                     {
                                                                                                                         //The user can make some changes (like adding headers)
                                                                                                                         message.Headers.Add("Authorization",

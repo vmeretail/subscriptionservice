@@ -420,7 +420,6 @@
             IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
 
             // 1. Arrange
-            List<Subscription> subscriptionList = new List<Subscription>();
             String streamName = "$ce-SalesTransactionAggregate";
             String groupName = "TestGroup";
             Int32 startFrom = 50;
