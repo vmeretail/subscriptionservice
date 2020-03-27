@@ -12,6 +12,7 @@
     using ILogger = Microsoft.Extensions.Logging.ILogger;
 
     /// <summary>
+    /// ConnectToPersistentSubscriptionAsync
     /// </summary>
     public sealed class Subscription
     {
@@ -48,6 +49,11 @@
         /// The logger
         /// </summary>
         private readonly ILogger Logger;
+
+        /// <summary>
+        /// The signalled to stop
+        /// </summary>
+        private Boolean SignalledToStop;
 
         /// <summary>
         /// The subscription builder
@@ -130,6 +136,8 @@
         /// </summary>
         public void Stop()
         {
+            Console.WriteLine($"{DateTime.UtcNow}: Public Stop {Thread.CurrentThread.ManagedThreadId}");
+
             this.IsStarted = false;
 
             this.Stop((dynamic)this.SubscriptionBuilder);
@@ -249,6 +257,7 @@
                                                                   Consumer consumer,
                                                                   CancellationToken cancellationToken)
         {
+            PersistentSubscriptionBuilder persistentSubscriptionBuilder = (PersistentSubscriptionBuilder)this.SubscriptionBuilder;
             Boolean autoAck = ((PersistentSubscriptionBuilder)this.SubscriptionBuilder).AutoAck;
 
             //TODO: Temp
@@ -256,7 +265,15 @@
 
             try
             {
-                await this.EventAppeared(resolvedEvent, consumer, cancellationToken);
+                if (persistentSubscriptionBuilder.EventAppeared != null)
+                {
+                    //We wire up the default handler.
+                    persistentSubscriptionBuilder.EventAppeared(subscription, resolvedEvent);
+                }
+                else
+                {
+                    await this.EventAppeared(resolvedEvent, consumer, cancellationToken);
+                }
 
                 if (autoAck == false)
                 {
@@ -289,18 +306,37 @@
                                                                 Consumer consumer,
                                                                 CancellationToken cancellationToken)
         {
+            CatchupSubscriptionBuilder catchupSubscriptionBuilder = (CatchupSubscriptionBuilder)this.SubscriptionBuilder;
+
             try
             {
-                await this.EventAppeared(resolvedEvent, consumer, cancellationToken);
+                if (catchupSubscriptionBuilder.DrainEvents && this.SignalledToStop) //and Stop being asked for!
+                {
+                    Console.WriteLine($"{DateTime.UtcNow}: Draining {resolvedEvent.OriginalEventNumber} {Thread.CurrentThread.ManagedThreadId}");
+                    return;
+                }
+
+                if (catchupSubscriptionBuilder.EventAppeared != null)
+                {
+                    //Call the clients own version.
+                    catchupSubscriptionBuilder.EventAppeared(eventStoreCatchUpSubscription, resolvedEvent);
+                }
+                else
+                {
+                    await this.EventAppeared(resolvedEvent, consumer, cancellationToken);
+                }
+
+                //TODO: I suspect this is where we emit information for lastCheckoint
+                //@event.OriginalEventNumber - catchup Name
             }
             catch(Exception e)
             {
+                this.SignalledToStop = true;
+
                 Console.WriteLine($"{DateTime.UtcNow}: EventAppearedFromCatchupSubscription Exception {resolvedEvent.OriginalEventNumber}({resolvedEvent.OriginalEvent.EventType}) on managed thread {Thread.CurrentThread.ManagedThreadId} {e.Message}");
 
-                //TODO: Log out Subscription Name?
-                this.Logger.LogError(e, $"Exception occured from CatchupSubscription {resolvedEvent.Event.EventId}");
-
-                //TODO: Do we now flag this subscriptino as beign signalled to stop and block all other events?
+                //TODO: Log out Subscription Name? - resolvedEvent.Event might be null
+                //this.Logger.LogError(e, $"Exception occured from CatchupSubscription {resolvedEvent.Event.EventId}");
 
                 //This eventually fires SubscriptionDropped but some more events will make it through before then
                 eventStoreCatchUpSubscription.Stop();
@@ -313,12 +349,28 @@
         /// <param name="eventStoreCatchUpSubscription">The event store catch up subscription.</param>
         private void LiveProcessingStarted(EventStoreCatchUpSubscription eventStoreCatchUpSubscription)
         {
-            //NOTE: Once we have caught up, this gets fired - but any new events will then appear in EventAppeared
-            //This is for information only (I think)
-            this.Logger.LogInformation($"LiveProcessingStarted: Stream Name: [{eventStoreCatchUpSubscription.SubscriptionName}]");
+            CatchupSubscriptionBuilder catchupSubscriptionBuilder = (CatchupSubscriptionBuilder)this.SubscriptionBuilder;
 
-            //TODO: Temp unitl I work out why logger not working
-            Console.WriteLine($"{DateTime.UtcNow}: Live processing started on managed thread {Thread.CurrentThread.ManagedThreadId}");
+            try
+            {
+                if (catchupSubscriptionBuilder.LiveProcessingStarted != null)
+                {
+                    //Call the clients version
+                    catchupSubscriptionBuilder.LiveProcessingStarted(eventStoreCatchUpSubscription);
+                }
+                else
+                {
+                    //NOTE: Once we have caught up, this gets fired - but any new events will then appear in EventAppeared
+                    //This is for information only (I think)
+                    this.Logger.LogInformation($"LiveProcessingStarted: Stream Name: [{eventStoreCatchUpSubscription.SubscriptionName}]");
+                }
+            }
+            catch(Exception e)
+            {
+                //NOTE: Once we have caught up, this gets fired - but any new events will then appear in EventAppeared
+                //This is for information only (I think)
+                this.Logger.LogError(e, $"LiveProcessingStarted: Stream Name: [{eventStoreCatchUpSubscription.SubscriptionName}]");
+            }
         }
 
         private async Task Start(CatchupSubscriptionBuilder catchupSubscriptionBuilder,
@@ -327,24 +379,6 @@
             ConsumerBuilder consumerBuilder = new ConsumerBuilder();
 
             Consumer consumer = consumerBuilder.AddEndpointUri(catchupSubscriptionBuilder.Uri).Build();
-
-            if (catchupSubscriptionBuilder.LiveProcessingStarted == null)
-            {
-                //We wire up the default handler.
-                catchupSubscriptionBuilder.LiveProcessingStarted = this.LiveProcessingStarted;
-            }
-
-            if (catchupSubscriptionBuilder.EventAppeared == null)
-            {
-                //We wire up the default handler.
-                catchupSubscriptionBuilder.EventAppeared = AppearedFromCatchupSubscription;
-            }
-
-            if (catchupSubscriptionBuilder.SubscriptionDropped == null)
-            {
-                //We wire up the default handler.
-                catchupSubscriptionBuilder.SubscriptionDropped = SubscriptionDropped;
-            }
 
             async void AppearedFromCatchupSubscription(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,
                                                        ResolvedEvent resolvedEvent)
@@ -359,15 +393,15 @@
                                            SubscriptionDropReason subscriptionDropReason,
                                            Exception e)
             {
-                await this.SubscriptionDropped(eventStoreCatchUpSubscription, subscriptionDropReason, e);
+                await this.SubscriptionDroppedForCatchupSubscription(eventStoreCatchUpSubscription, subscriptionDropReason, e);
             }
 
             this.EventStoreStreamCatchUpSubscription = this.EventStoreConnection.SubscribeToStreamFrom(catchupSubscriptionBuilder.StreamName,
                                                                                                        catchupSubscriptionBuilder.LastCheckpoint,
                                                                                                        catchupSubscriptionBuilder.CatchUpSubscriptionSettings,
-                                                                                                       catchupSubscriptionBuilder.EventAppeared,
-                                                                                                       catchupSubscriptionBuilder.LiveProcessingStarted,
-                                                                                                       catchupSubscriptionBuilder.SubscriptionDropped);
+                                                                                                       AppearedFromCatchupSubscription,
+                                                                                                       this.LiveProcessingStarted,
+                                                                                                       SubscriptionDropped);
         }
 
         private async Task Start(PersistentSubscriptionBuilder persistentSubscriptionBuilder,
@@ -375,24 +409,6 @@
         {
             ConsumerBuilder consumerBuilder = new ConsumerBuilder();
             Consumer consumer = consumerBuilder.AddEndpointUri(persistentSubscriptionBuilder.Uri).Build();
-
-            if (persistentSubscriptionBuilder.EventAppeared == null)
-            {
-                //We wire up the default handler.
-                persistentSubscriptionBuilder.EventAppeared = EventAppearedAction;
-            }
-
-            if (persistentSubscriptionBuilder.SubscriptionDropped == null)
-            {
-                //TODO: -create body for default subscription dropped.
-                //We wire up the default handler.
-                persistentSubscriptionBuilder.SubscriptionDropped = (eventStorePersistentSubscriptionBase,
-                                                                     reason,
-                                                                     arg3) =>
-                                                                    {
-                                                                        Console.WriteLine("Default SubscriptionDropped called");
-                                                                    };
-            }
 
             async void EventAppearedAction(EventStorePersistentSubscriptionBase eventStorePersistentSubscriptionBase,
                                            ResolvedEvent resolvedEvent)
@@ -404,16 +420,14 @@
             {
                 this.EventStorePersistentSubscriptionBase = await this.EventStoreConnection.ConnectToPersistentSubscriptionAsync(persistentSubscriptionBuilder.StreamName,
                                                                                                                                  persistentSubscriptionBuilder.GroupName,
-                                                                                                                                 persistentSubscriptionBuilder
-                                                                                                                                     .EventAppeared,
-                                                                                                                                 persistentSubscriptionBuilder
-                                                                                                                                     .SubscriptionDropped,
+                                                                                                                                 EventAppearedAction,
+                                                                                                                                 this
+                                                                                                                                     .SubscriptionDroppedForPersistentSubscription,
                                                                                                                                  persistentSubscriptionBuilder
                                                                                                                                      .UserCredentials,
                                                                                                                                  persistentSubscriptionBuilder
                                                                                                                                      .InFlightLimit,
-                                                                                                                                 autoAck:persistentSubscriptionBuilder
-                                                                                                                                     .AutoAck);
+                                                                                                                                 persistentSubscriptionBuilder.AutoAck);
             }
 
             try
@@ -441,6 +455,8 @@
 
         private void Stop(CatchupSubscriptionBuilder catchupSubscriptionBuilder)
         {
+            Console.WriteLine($"{DateTime.UtcNow}: Stop called CatchupSubscriptionBuilder {Thread.CurrentThread.ManagedThreadId}");
+
             //TODO: Might add the EventStoreStreamCatchUpSubscription to CatchupSubscriptionBuilder
             this.EventStoreStreamCatchUpSubscription?.Stop();
         }
@@ -450,12 +466,53 @@
             this.EventStorePersistentSubscriptionBase?.Stop(TimeSpan.FromSeconds(30));
         }
 
-        private async Task SubscriptionDropped(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,
-                                               SubscriptionDropReason subscriptionDropReason,
-                                               Exception e)
+        private async Task SubscriptionDroppedForCatchupSubscription(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,
+                                                                     SubscriptionDropReason subscriptionDropReason,
+                                                                     Exception e)
         {
-            //TODO: Log this out properly
-            Console.WriteLine("Default SubscriptionDropped");
+            this.SignalledToStop = true;
+
+            CatchupSubscriptionBuilder catchupSubscriptionBuilder = (CatchupSubscriptionBuilder)this.SubscriptionBuilder;
+
+            try
+            {
+                if (catchupSubscriptionBuilder.SubscriptionDropped != null)
+                {
+                    catchupSubscriptionBuilder.SubscriptionDropped(eventStoreCatchUpSubscription, subscriptionDropReason, e);
+                }
+                else
+                {
+                    //This is the internal processing.
+                    Console.WriteLine($"{DateTime.UtcNow}: SubscriptionDropped {subscriptionDropReason} on managed thread {Thread.CurrentThread.ManagedThreadId}");
+                }
+            }
+            catch(Exception exception)
+            {
+                Console.WriteLine(exception);
+            }
+        }
+
+        private void SubscriptionDroppedForPersistentSubscription(EventStorePersistentSubscriptionBase arg1,
+                                                                  SubscriptionDropReason arg2,
+                                                                  Exception arg3)
+        {
+            PersistentSubscriptionBuilder persistentSubscriptionBuilder = (PersistentSubscriptionBuilder)this.SubscriptionBuilder;
+
+            try
+            {
+                if (persistentSubscriptionBuilder.SubscriptionDropped != null)
+                {
+                    persistentSubscriptionBuilder.SubscriptionDropped(arg1, arg2, arg3);
+                }
+                else
+                {
+                    this.Logger.LogInformation($"SubscriptionDroppedForPersistentSubscription {arg2} {arg3}");
+                }
+            }
+            catch(Exception e)
+            {
+                this.Logger.LogError(e, $"SubscriptionDroppedForPersistentSubscription {arg2} {arg3}");
+            }
         }
 
         #endregion

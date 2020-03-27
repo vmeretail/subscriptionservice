@@ -17,6 +17,11 @@
         internal CatchUpSubscriptionSettings CatchUpSubscriptionSettings;
 
         /// <summary>
+        /// The drain events
+        /// </summary>
+        internal Boolean DrainEvents;
+
+        /// <summary>
         /// The event appeared
         /// </summary>
         internal Action<EventStoreCatchUpSubscription, ResolvedEvent> EventAppeared;
@@ -53,6 +58,7 @@
         {
             this.StreamName = streamName;
             this.CatchUpSubscriptionSettings = CatchUpSubscriptionSettings.Default;
+            this.DrainEvents = false; //Let's assume client whats the read buffer emptied.
         }
 
         #endregion
@@ -103,6 +109,17 @@
         public static CatchupSubscriptionBuilder Create(String streamName)
         {
             return new CatchupSubscriptionBuilder(streamName);
+        }
+
+        /// <summary>
+        /// Drains the events after subscription dropped.
+        /// </summary>
+        /// <returns></returns>
+        public CatchupSubscriptionBuilder DrainEventsAfterSubscriptionDropped()
+        {
+            this.DrainEvents = true;
+
+            return this;
         }
 
         /// <summary>

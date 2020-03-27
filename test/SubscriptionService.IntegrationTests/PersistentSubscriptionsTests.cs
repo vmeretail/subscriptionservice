@@ -613,41 +613,53 @@
             String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
 
             List<Guid> eventsToCheck = new List<Guid>();
-            Int32 expectedVersion = -1;
+            //Int32 expectedVersion = -1;
+
+            List< EventData > events = new List<EventData>();
+
+            //The 2000 could become Inline for ranges?
             // Setup some dummy events in the Event Store
             for (Int32 i = 0; i < 2000; i++)
             {
-                // Write 100 events to EventStore
                 var sale = new
                            {
                                AggregateId = aggregateId,
                                EventId = Guid.NewGuid()
                            };
+
                 String eventAsString = JsonConvert.SerializeObject(sale);
                 EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
 
-                await eventStoreConnection.AppendToStreamAsync(streamName, expectedVersion, eventData);
-                expectedVersion++;
+                events.Add(eventData);
+                
+                //expectedVersion++;
                 eventsToCheck.Add(sale.EventId);
             }
+
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
+
             List<ResolvedEvent> eventsDelivered = new List<ResolvedEvent>();
 
             // Setup a subscription configuration to deliver the events to the dummy REST
             Subscription subscription = PersistentSubscriptionBuilder.Create(streamName, "TestGroup1").UseConnection(eventStoreConnection)
-                                                                     .DeliverTo(new Uri(this.EndPointUrl))
-                                                                     .AddEventAppearedHandler((@base,
-                                                                                               @event) =>
-                                                                                              {
-                                                                                                  eventsDelivered.Add(@event);
-                                                                                              })
-                                                                     .AddLogger(this.Logger)
-                                                                     .Build();
+                                                                     .DeliverTo(new Uri(this.EndPointUrl)).AddEventAppearedHandler((@base,
+                                                                                                                                    @event) =>
+                                                                                                                                   {
+                                                                                                                                       eventsDelivered.Add(@event);
+                                                                                                                                       Thread.Sleep(10);
+                                                                                                                                   }).AddLogger(this.Logger)
+                                                                     .AddSubscriptionDroppedHandler((@base,
+                                                                                                     reason,
+                                                                                                     arg3) =>
+                                                                                                    {
+                                                                                                        this.TestsFixture.LogMessageToTrace($"Subscription Dropped {this.TestName}");
+                                                                                                    }).Build();
 
             // 2. Act
             // Start the subscription service
             await subscription.Start(CancellationToken.None);
 
-            await Task.Delay(10000);
+            await Task.Delay(1000);
 
             subscription.Stop();
 
