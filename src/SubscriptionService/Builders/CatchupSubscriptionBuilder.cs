@@ -162,6 +162,18 @@
             return this;
         }
 
+        public CatchupSubscriptionBuilder AddLastCheckPointChanged(Action<String,Int64> lastCheckpointChanged,Int64 checkpointCount)
+        {
+            this.LastCheckpointChanged = lastCheckpointChanged;
+            this.CheckpointCount = checkpointCount;
+
+            return this;
+        }
+
+        internal Action<String,Int64> LastCheckpointChanged;
+
+        internal Int64 CheckpointCount;
+
         #endregion
     }
 }
