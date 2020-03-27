@@ -252,7 +252,7 @@
             // 3. Assert
             await this.TestsFixture.CheckEvents(new List<Guid>
                                                 {
-                                                    sale.EventId
+                                                    Guid.NewGuid()
                                                 },
                                                 this.EndPointUrl,
                                                 this.ReadModelHttpClient);
