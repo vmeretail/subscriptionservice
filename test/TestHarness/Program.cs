@@ -86,21 +86,21 @@
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
 
-            ILogger logger = new LoggerFactory().CreateLogger("CatchupLogger");
+            ILogger logger = new LoggerFactory().CreateLogger("PersistentLogger");
 
             //RequestBin
-            Uri uri = new Uri("https://ennxdwa7hkx8e.x.pipedream.net/");
+            Uri uri = new Uri("https://en6m4s6ex2wfg.x.pipedream.net");
 
-            PersistentSubscriptionBuilder builder = PersistentSubscriptionBuilder.Create("$ce-CatchupTest", "Persistent Test 1")
+            PersistentSubscriptionBuilder builder = PersistentSubscriptionBuilder.Create("$ce-PersistentTest", "Persistent Test 1")
                                                                                  .UseConnection(eventStoreConnection)
-                                                                                 .AddEventAppearedHandler((@base,
-                                                                                                                                               @event) =>
-                                                                                                                                              {
-                                                                                                                                                  Console
-                                                                                                                                                      .WriteLine("Override EventAppeared called.");
-                                                                                                                                              }).AutoAckEvents()
+                                                                                 //.AddEventAppearedHandler((@base,
+                                                                                 //                                                              @event) =>
+                                                                                 //                                                             {
+                                                                                 //                                                                 Console
+                                                                                 //                                                                     .WriteLine("Override EventAppeared called.");
+                                                                                 //                                                             }).AutoAckEvents()
                                                                                  .DeliverTo(uri)
-                                                                                 .SetInFlightLimit(10)
+                                                                                 .SetInFlightLimit(1)
                                                                                  .UseHttpInterceptor(message =>
                                                                                                                     {
                                                                                                                         //The user can make some changes (like adding headers)
@@ -111,6 +111,10 @@
             Subscription subscription = builder.Build();
 
             await subscription.Start(CancellationToken.None);
+
+            Console.ReadKey();
+
+            subscription.Stop();
         }
 
         #endregion

@@ -30,7 +30,7 @@
         /// </summary>
         public TestsFixture()
         {
-           
+
         }
 
         #endregion
@@ -198,15 +198,18 @@
 
             // Get the file target from nlog config
             FileTarget fileTarget = LogManager.Configuration.FindTargetByName<FileTarget>("logfile");
-            
+
             // Get the filename
-            LogEventInfo logEventInfo = new LogEventInfo { TimeStamp = DateTime.Now };
+            LogEventInfo logEventInfo = new LogEventInfo
+                                        {
+                                            TimeStamp = DateTime.Now
+                                        };
             String fileName = fileTarget.FileName.Render(logEventInfo);
             FileInfo fi = new FileInfo(fileName);
 
             // Make sure the trace directory exists
             Directory.CreateDirectory(fi.DirectoryName);
-            
+
             // Write the log
             logger.Info(traceMessage);
         }
