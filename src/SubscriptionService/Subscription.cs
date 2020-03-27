@@ -458,13 +458,12 @@
             Console.WriteLine($"{DateTime.UtcNow}: Stop called CatchupSubscriptionBuilder {Thread.CurrentThread.ManagedThreadId}");
 
             //TODO: Might add the EventStoreStreamCatchUpSubscription to CatchupSubscriptionBuilder
-            this.EventStoreStreamCatchUpSubscription.Stop();
+            this.EventStoreStreamCatchUpSubscription?.Stop();
         }
 
         private void Stop(PersistentSubscriptionBuilder subscriptionBuilder)
         {
-            //TODO: Review this
-            //this.EventStorePersistentSubscriptionBase.Stop(TimeSpan.FromSeconds(30));
+            this.EventStorePersistentSubscriptionBase?.Stop(TimeSpan.FromSeconds(30));
         }
 
         private async Task SubscriptionDroppedForCatchupSubscription(EventStoreCatchUpSubscription eventStoreCatchUpSubscription,

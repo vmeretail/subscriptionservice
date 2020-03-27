@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Net.Http;
     using System.Text;
@@ -12,6 +13,7 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
+    using NLog.Targets;
     using Shouldly;
 
     /// <summary>
@@ -28,7 +30,7 @@
         /// </summary>
         public TestsFixture()
         {
-           
+
         }
 
         #endregion
@@ -190,10 +192,25 @@
         /// <param name="traceMessage">The trace message.</param>
         public void LogMessageToTrace(String traceMessage)
         {
-            Logger logger = LogManager.GetLogger("SubscriptionService");
-
             Console.WriteLine(traceMessage);
 
+            Logger logger = LogManager.GetLogger("SubscriptionService");
+
+            // Get the file target from nlog config
+            FileTarget fileTarget = LogManager.Configuration.FindTargetByName<FileTarget>("logfile");
+
+            // Get the filename
+            LogEventInfo logEventInfo = new LogEventInfo
+                                        {
+                                            TimeStamp = DateTime.Now
+                                        };
+            String fileName = fileTarget.FileName.Render(logEventInfo);
+            FileInfo fi = new FileInfo(fileName);
+
+            // Make sure the trace directory exists
+            Directory.CreateDirectory(fi.DirectoryName);
+
+            // Write the log
             logger.Info(traceMessage);
         }
 
