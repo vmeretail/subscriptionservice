@@ -5,6 +5,7 @@
     using System.IO;
     using System.Linq;
     using System.Net.Http;
+    using System.Reflection;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -15,6 +16,7 @@
     using NLog;
     using NLog.Targets;
     using Shouldly;
+    using Xunit.Abstractions;
 
     /// <summary>
     /// </summary>
@@ -245,6 +247,27 @@
 
             // Write the log
             logger.Info(traceMessage);
+        }
+
+        /// <summary>
+        /// Generates the name of the test.
+        /// </summary>
+        /// <param name="output">The output.</param>
+        /// <returns></returns>
+        public String GenerateTestName(ITestOutputHelper output)
+        {
+            Type type = output.GetType();
+            FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
+            ITest test = (ITest)testMember.GetValue(output);
+            String testName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
+
+            testName = testName.Replace("(", "");
+            testName = testName.Replace(")", "");
+            testName = testName.Replace(":", "_");
+            testName = testName.Replace(",", "_");
+            testName = testName.Replace(" ", "");
+
+            return testName;
         }
 
         /// <summary>

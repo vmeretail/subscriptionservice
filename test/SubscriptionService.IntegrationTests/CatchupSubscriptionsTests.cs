@@ -82,10 +82,7 @@ namespace SubscriptionService.IntegrationTests
         {
             this.TestsFixture = data;
 
-            Type type = output.GetType();
-            FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
-            ITest test = (ITest)testMember.GetValue(output);
-            this.TestName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
+            this.TestName = this.TestsFixture.GenerateTestName(output);
 
             this.TestsFixture.LogMessageToTrace($"{this.TestName} starting - in constructor");
 
