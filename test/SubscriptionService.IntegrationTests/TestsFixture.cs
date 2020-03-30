@@ -49,10 +49,15 @@
         {
             this.LogMessageToTrace($"CheckEvents - looking for {eventIds.Count} events");
 
-            List<Guid> foundEvents = new List<Guid>();
+            foreach (Guid eventId in eventIds)
+            {
+                this.LogMessageToTrace($"Event Id [{eventId}]");
+            }
 
             await Retry.For(async () =>
                             {
+                                List<Guid> foundEvents = new List<Guid>();
+
                                 HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl, CancellationToken.None);
 
                                 String responseContent = await responseMessage.Content.ReadAsStringAsync();
@@ -62,7 +67,7 @@
                                     throw new Exception();
                                 }
 
-                                this.LogMessageToTrace($"Response from endpoint is [{responseContent}]");
+                                this.LogMessageToTrace($"Response from endpoint [{endpointUrl}] is [{responseContent}]");
 
                                 JArray jsonArray = JArray.Parse(responseContent);
 
