@@ -362,9 +362,86 @@ namespace SubscriptionService.IntegrationTests
             return events;
         }
 
+  
+        [Fact]
+        public async Task CatchupSubscriptions_LastCheckpointChanged_VerifyBroadcasts()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
+
+            // 1. Arrange
+            Int32 totalEvents = 100;
+            Int32 checkPointBroadcastFrequency = 10; //every 10 events we should get a message
+            Int32 lastCheckpointBroadcasts = 0;
+            Int64 lastCheckpoint = 0;
+
+            String aggregateName = "SalesTransactionAggregate";
+            Guid aggregateId = Guid.NewGuid();
+            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
+
+            //Generate 100 events
+            var events = GenerateEvents(totalEvents);
+
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
+
+            ManualResetEvent manualResetEvent = new ManualResetEvent(false);
+
+            //https://groups.google.com/forum/#!topic/event-store/fGIIDOSGa1Q
+            //I think ther read buffersize is important here.
+            //if ES has read all the events, it will signal LiveStarted, even though those events will most likely
+            //not be processed yet.
+
+            var catchUpSubscriptionSettings = new CatchUpSubscriptionSettings(1, 1, true, true,"$ce-SalesTransactionAggregate");
+
+            // 2. Act
+            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-SalesTransactionAggregate")
+                                                                  .SetName("CatchupTest1")
+                                                                  .UseConnection(eventStoreConnection)
+                                                                  .WithCatchUpSubscriptionSettings(catchUpSubscriptionSettings)
+                                                                  .AddEventAppearedHandler((upSubscription,
+                                                                                            @event) =>
+                                                                                           {
+                                                                                               this.TestsFixture.LogMessageToTrace($"Event appeared {@event.OriginalEventNumber}");
+                                                                                           })
+                                                                  .AddLogger(this.Logger)
+                                                                  .AddLastCheckPointChanged((s,
+                                                                                             l) =>
+                                                                                            {
+                                                                                                this.TestsFixture.LogMessageToTrace($"LastCheckPoint changed {l}");
+
+                                                                                                lastCheckpointBroadcasts++;
+                                                                                                lastCheckpoint = l;
+                                                                                            }, checkPointBroadcastFrequency)
+                                                                  .AddLiveProcessingStartedHandler((upSubscription =>
+                                                                                                    {
+                                                                                                        this.TestsFixture.LogMessageToTrace($"LiveProcessingStarted");
+
+                                                                                                        //Just signal we caught up.
+                                                                                                        manualResetEvent.Set();
+                                                                                                    }))
+                
+                                                                  .Build();
+
+            await subscription.Start(CancellationToken.None);
+
+            manualResetEvent.WaitOne(TimeSpan.FromSeconds(10));
+
+            // 3. Assert
+            lastCheckpointBroadcasts.ShouldBe(totalEvents/ checkPointBroadcastFrequency);
+            lastCheckpoint.ShouldBe(99 );//TODO:
+
+            // 4. Cleanup
+            subscription.Stop();
+            eventStoreConnection.Close();
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
+        }
         [Fact]
         //[InlineData(100,49)] - Issue #120
-        public async Task CatchupSubscriptions_LastCheckpoint_StartsAtSelectedCheckpoint()
+        public async Task CatchupSubscriptions_SetLastCheckpoint_StartsAtSelectedCheckpoint()
         {
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
             String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
