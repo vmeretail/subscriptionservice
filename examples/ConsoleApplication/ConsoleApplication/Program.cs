@@ -9,8 +9,11 @@
     using SubscriptionService.Builders;
     using SubscriptionService.Extensions;
 
-    internal class Program
+    public class Program
     {
+        public static String ConnectionString = "ConnectTo=tcp://admin:changeit@localhost1113;VerboseLogging=true;";
+        public static Uri Endpoint1 = new Uri("https://ennxdwa7hkx8e.x.pipedream.net/");
+
         #region Methods
 
         /// <summary>
