@@ -11,6 +11,7 @@ categories:
       - 'workflows'
       - 'documentation'
       - 'examples'
+      - 'maintenance'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 exclude-labels:
   - 'skip-changelog'
