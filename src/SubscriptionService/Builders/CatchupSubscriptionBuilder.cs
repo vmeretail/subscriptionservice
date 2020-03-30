@@ -17,6 +17,11 @@
         internal CatchUpSubscriptionSettings CatchUpSubscriptionSettings;
 
         /// <summary>
+        /// The checkpoint count
+        /// </summary>
+        internal Int64 CheckpointCount;
+
+        /// <summary>
         /// The drain events
         /// </summary>
         internal Boolean DrainEvents;
@@ -30,6 +35,11 @@
         /// The last checkpoint
         /// </summary>
         internal Int64? LastCheckpoint;
+
+        /// <summary>
+        /// The last checkpoint changed
+        /// </summary>
+        internal Action<String, Int64> LastCheckpointChanged;
 
         /// <summary>
         /// The live processing started
@@ -73,6 +83,21 @@
         public CatchupSubscriptionBuilder AddEventAppearedHandler(Action<EventStoreCatchUpSubscription, ResolvedEvent> eventAppeared)
         {
             this.EventAppeared = eventAppeared;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds the last check point changed.
+        /// </summary>
+        /// <param name="lastCheckpointChanged">The last checkpoint changed.</param>
+        /// <param name="checkpointCount">The checkpoint count.</param>
+        /// <returns></returns>
+        public CatchupSubscriptionBuilder AddLastCheckPointChanged(Action<String, Int64> lastCheckpointChanged,
+                                                                   Int64 checkpointCount)
+        {
+            this.LastCheckpointChanged = lastCheckpointChanged;
+            this.CheckpointCount = checkpointCount;
 
             return this;
         }
@@ -161,18 +186,6 @@
 
             return this;
         }
-
-        public CatchupSubscriptionBuilder AddLastCheckPointChanged(Action<String,Int64> lastCheckpointChanged,Int64 checkpointCount)
-        {
-            this.LastCheckpointChanged = lastCheckpointChanged;
-            this.CheckpointCount = checkpointCount;
-
-            return this;
-        }
-
-        internal Action<String,Int64> LastCheckpointChanged;
-
-        internal Int64 CheckpointCount;
 
         #endregion
     }

@@ -108,22 +108,19 @@
 
                                                                   //                             Console.WriteLine($"DELIVERED Event {@event.OriginalEventNumber}");
                                                                   //                         })
-                                                                  .DrainEventsAfterSubscriptionDropped()
-                                                                  .AddSubscriptionDroppedHandler((upSubscription,
-                                                                                                   reason,
-                                                                                                   arg3) =>
-                                                                                                  {
-                                                                                                        Console.WriteLine($"{DateTime.UtcNow}: Override SubscriptionDropped {Thread.CurrentThread.ManagedThreadId}");
-                                                                                                      eventStoreConnection.Close();
-                                                                                                  }
-                                                                                                  )
-                                                                  .DeliverTo(uri).UseHttpInterceptor(message =>
-                                                                                                     {
-                                                                                                         //The user can make some changes (like adding headers)
-                                                                                                         message.Headers.Add("Authorization", "Bearer someToken");
-                                                                                                     })
-                                                                  .AddLogger(logger)
-                                                                  .Build();
+                                                                  .DrainEventsAfterSubscriptionDropped().AddSubscriptionDroppedHandler((upSubscription,
+                                                                                                                                        reason,
+                                                                                                                                        arg3) =>
+                                                                                                                                       {
+                                                                                                                                           Console
+                                                                                                                                               .WriteLine($"{DateTime.UtcNow}: Override SubscriptionDropped {Thread.CurrentThread.ManagedThreadId}");
+                                                                                                                                           eventStoreConnection.Close();
+                                                                                                                                       }).DeliverTo(uri)
+                                                                  .UseHttpInterceptor(message =>
+                                                                                      {
+                                                                                          //The user can make some changes (like adding headers)
+                                                                                          message.Headers.Add("Authorization", "Bearer someToken");
+                                                                                      }).AddLogger(logger).Build();
 
             await subscription.Start(CancellationToken.None);
 
@@ -143,6 +140,23 @@
             //await Program.PersistentTest();
 
             Console.ReadKey();
+        }
+
+        private async Task Test(CancellationToken cancellationToken)
+        {
+            String connectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
+
+            IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
+            await eventStoreConnection.ConnectAsync();
+
+            Uri uri = new Uri("https://localhost/api/yourAPI");
+
+            var subscription = PersistentSubscriptionBuilder.Create("$ce-PersistentTest", "Persistent Test 1")
+                                                            .UseConnection(eventStoreConnection)
+                                                            .DeliverTo(uri)
+                                                            .Build();
+
+            await subscription.Start(cancellationToken);
         }
 
         private static async Task PersistentTest()

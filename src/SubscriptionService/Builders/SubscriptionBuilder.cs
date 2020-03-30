@@ -154,7 +154,6 @@
         /// <returns></returns>
         internal SubscriptionBuilder DeliverTo(Uri uri)
         {
-            //TODO: Will we allow multiple endpoints? - raise an issue
             this.Uri = uri;
 
             return this;
