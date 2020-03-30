@@ -102,7 +102,7 @@
         /// </summary>
         /// <param name="eventFactory">The event factory.</param>
         /// <returns></returns>
-        public SubscriptionBuilder UseEventFactory(IEventFactory eventFactory)
+        internal SubscriptionBuilder UseEventFactory(IEventFactory eventFactory)
         {
             this.EventFactory = eventFactory;
 
