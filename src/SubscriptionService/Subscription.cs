@@ -120,8 +120,7 @@
                 throw new InvalidOperationException("Subscription already started.");
             }
 
-            //TODO: Fix trace
-            Console.WriteLine($"{DateTime.UtcNow}: {this.SubscriptionBuilder.GetType()} Start on managed thread {Thread.CurrentThread.ManagedThreadId}");
+            this.Logger.LogInformation($"{this.SubscriptionBuilder.GetType()} Start on managed thread {Thread.CurrentThread.ManagedThreadId}");
 
             //Choose which start route
             await this.Start((dynamic)this.SubscriptionBuilder, cancellationToken);
@@ -134,7 +133,7 @@
         /// </summary>
         public void Stop()
         {
-            Console.WriteLine($"{DateTime.UtcNow}: Public Stop {Thread.CurrentThread.ManagedThreadId}");
+            this.Logger.LogInformation($"Public Stop {Thread.CurrentThread.ManagedThreadId}");
 
             this.IsStarted = false;
 
@@ -258,8 +257,7 @@
             PersistentSubscriptionBuilder persistentSubscriptionBuilder = (PersistentSubscriptionBuilder)this.SubscriptionBuilder;
             Boolean autoAck = ((PersistentSubscriptionBuilder)this.SubscriptionBuilder).AutoAck;
 
-            //TODO: Temp
-            Console.WriteLine($"{DateTime.UtcNow}: EventAppearedForPersistentSubscription  {resolvedEvent.OriginalEventNumber} on managed thread {Thread.CurrentThread.ManagedThreadId}");
+            this.Logger.LogInformation($"EventAppearedForPersistentSubscription {resolvedEvent.OriginalEventNumber} on managed thread {Thread.CurrentThread.ManagedThreadId}");
 
             try
             {
@@ -310,7 +308,7 @@
             {
                 if (catchupSubscriptionBuilder.DrainEvents && this.SignalledToStop) //and Stop being asked for!
                 {
-                    Console.WriteLine($"{DateTime.UtcNow}: Draining {resolvedEvent.OriginalEventNumber} {Thread.CurrentThread.ManagedThreadId}");
+                    this.Logger.LogInformation($"Draining {resolvedEvent.OriginalEventNumber} {Thread.CurrentThread.ManagedThreadId}");
                     return;
                 }
 
@@ -324,14 +322,26 @@
                     await this.EventAppeared(resolvedEvent, consumer, cancellationToken);
                 }
 
-                //TODO: I suspect this is where we emit information for lastCheckoint
-                //@event.OriginalEventNumber - catchup Name
+
+                //TODO: Make this a bit clearer
+                //Only broadcast when the checkpointCount has been matched
+
+                Int64 eventCount = resolvedEvent.OriginalEventNumber + 1;
+
+                if (catchupSubscriptionBuilder.LastCheckpointChanged != null)
+                {
+                    if ((eventCount % catchupSubscriptionBuilder.CheckpointCount == 0))
+                    {
+                        //Client wants to know about this.
+                        catchupSubscriptionBuilder.LastCheckpointChanged(eventStoreCatchUpSubscription.SubscriptionName, resolvedEvent.OriginalEventNumber);
+                    }
+                }
             }
             catch(Exception e)
             {
                 this.SignalledToStop = true;
 
-                Console.WriteLine($"{DateTime.UtcNow}: EventAppearedFromCatchupSubscription Exception {resolvedEvent.OriginalEventNumber}({resolvedEvent.OriginalEvent.EventType}) on managed thread {Thread.CurrentThread.ManagedThreadId} {e.Message}");
+                this.Logger.LogWarning($"EventAppearedFromCatchupSubscription Exception {resolvedEvent.OriginalEventNumber}({resolvedEvent.OriginalEvent.EventType}) on managed thread {Thread.CurrentThread.ManagedThreadId} {e.Message}");
 
                 //TODO: Log out Subscription Name? - resolvedEvent.Event might be null
                 //this.Logger.LogError(e, $"Exception occured from CatchupSubscription {resolvedEvent.Event.EventId}");
@@ -453,7 +463,7 @@
 
         private void Stop(CatchupSubscriptionBuilder catchupSubscriptionBuilder)
         {
-            Console.WriteLine($"{DateTime.UtcNow}: Stop called CatchupSubscriptionBuilder {Thread.CurrentThread.ManagedThreadId}");
+            this.Logger.LogInformation($"Stop called CatchupSubscriptionBuilder {Thread.CurrentThread.ManagedThreadId}");
 
             //TODO: Might add the EventStoreStreamCatchUpSubscription to CatchupSubscriptionBuilder
             this.EventStoreStreamCatchUpSubscription?.Stop();
@@ -481,12 +491,12 @@
                 else
                 {
                     //This is the internal processing.
-                    Console.WriteLine($"{DateTime.UtcNow}: SubscriptionDropped {subscriptionDropReason} on managed thread {Thread.CurrentThread.ManagedThreadId}");
+                    this.Logger.LogInformation($"SubscriptionDropped {subscriptionDropReason} on managed thread {Thread.CurrentThread.ManagedThreadId}");
                 }
             }
             catch(Exception exception)
             {
-                Console.WriteLine(exception);
+                this.Logger.LogError(exception, "Exception occurred in SubscriptionDroppedForCatchupSubscription");
             }
         }
 

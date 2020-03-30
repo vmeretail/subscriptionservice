@@ -13,12 +13,16 @@ namespace SubscriptionService.IntegrationTests
     using EventStore.ClientAPI;
     using Extensions;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Configuration;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+    using NLog;
+    using NLog.Extensions.Logging;
     using Shouldly;
     using Xunit;
     using Xunit.Abstractions;
     using ILogger = Microsoft.Extensions.Logging.ILogger;
+    using SubscriptionService.Extensions;
 
     [Collection("Database collection")]
     public class CatchupSubscriptionsTests : IClassFixture<TestsFixture>, IDisposable
@@ -95,7 +99,12 @@ namespace SubscriptionService.IntegrationTests
             this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
             this.EndPointUrl1 = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events1";
 
-            this.Logger = new LoggerFactory().CreateLogger("CatchupSubscriptionsTests");
+            LogManager.LoadConfiguration("nlog.config");
+
+            NLogLoggerFactory loggerFactory = new NLogLoggerFactory();
+            loggerFactory.AddNLog();
+            this.Logger = loggerFactory.CreateLogger("CatchupSubscriptionsTests");
+
         }
 
         #endregion
@@ -325,6 +334,73 @@ namespace SubscriptionService.IntegrationTests
             obj["AggregateId"].Value<String>().ShouldBe(sale.AggregateId.ToString());
             obj["id"].Value<Int32>().ShouldBe(1);
             obj["EventId"].Value<String>().ShouldBe(eventId.ToString());
+
+            // 4. Cleanup
+            subscription.Stop();
+            eventStoreConnection.Close();
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
+        }
+
+        public List<EventData> GenerateEvents(Int32 numberOfEvents)
+        {
+            List < EventData > events = new List<EventData>();
+
+            for (Int32 i = 0; i < numberOfEvents; i++)
+            {
+                var @event = new
+                           {
+                               id = i+1
+                           };
+
+                Guid eventId = Guid.NewGuid();
+                String eventAsString = JsonConvert.SerializeObject(@event);
+                EventData eventData = new EventData(eventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
+
+                events.Add(eventData);
+            }
+
+            return events;
+        }
+
+        [Fact]
+        //[InlineData(100,49)] - Issue #120
+        public async Task CatchupSubscriptions_LastCheckpoint_StartsAtSelectedCheckpoint()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
+
+            // 1. Arrange
+            Int32 totalEvents = 100;
+            Int32 lastCheckPoint = 49;
+
+            String aggregateName = "SalesTransactionAggregate";
+            Guid aggregateId = Guid.NewGuid();
+            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
+
+            //Generate 100 events
+            var events = GenerateEvents(totalEvents);
+
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
+
+            // 2. Act
+            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-SalesTransactionAggregate")
+                                                                  .SetName("CatchupTest1")
+                                                                  .UseConnection(eventStoreConnection)
+                                                                  .DeliverTo(new Uri(this.EndPointUrl))
+                                                                  .AddLogger(this.Logger)
+                                                                  .UseEventFactory(new TestEventFactory())
+                                                                  .SetLastCheckpoint(lastCheckPoint)
+                                                                  .Build();
+
+            await subscription.Start(CancellationToken.None);
+
+            // 3. Assert
+            var expectedEvents = (totalEvents - lastCheckPoint) -1;
+            var eventsToCheck = await this.TestsFixture.GetEvents(this.EndPointUrl, this.ReadModelHttpClient, expectedEvents);
 
             // 4. Cleanup
             subscription.Stop();

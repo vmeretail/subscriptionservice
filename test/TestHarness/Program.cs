@@ -19,6 +19,56 @@
     {
         #region Methods
 
+        private static async Task CatchupTestWithLastCheckpoint()
+        {
+            String connectionString = "ConnectTo=tcp://admin:changeit@staging2.eposity.com:1113;VerboseLogging=true;";
+
+            IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
+            await eventStoreConnection.ConnectAsync();
+            Int64 lastCheckpoint = 0;
+            Int64 checkPointCount = 5;
+
+            Subscription subscription = null;
+            subscription = CatchupSubscriptionBuilder.Create("$ce-CatchupTest").SetName("Test Catchup 1")
+                                                     .UseConnection(eventStoreConnection)
+                                                     .AddEventAppearedHandler((upSubscription,
+                                                                               @event) =>
+                                                                              {
+                                                                                  Console.WriteLine($"Event appeared {@event.OriginalEventNumber}");
+                                                                              })
+                                                     .AddLastCheckPointChanged((s,
+                                                                                l) =>
+                                                                               {
+                                                                                   Console.WriteLine($"lastCheckpoint updated {l}");
+
+                                                                                   //This is where the client would persist the lastCheckpoint
+                                                                                   lastCheckpoint = l;
+
+                                                                               }, checkPointCount)
+                                                     .Build();
+
+            await subscription.Start(CancellationToken.None);
+
+            Console.WriteLine($"About to start from lastCheckpoint {lastCheckpoint}");
+
+
+            //TODO: Should we allow a Restart (rather than guarding against >sratt being called again
+            //If subscription.IsStarted is false, we should make sure this cna be restarted
+            //It might mean dirty variables though, but lets test it and see.
+            //Maybe a .Resume?
+            subscription = CatchupSubscriptionBuilder.Create("$ce-CatchupTest").SetName("Test Catchup 1")
+                                                                  .UseConnection(eventStoreConnection)
+                                                                  .AddEventAppearedHandler((upSubscription,
+                                                                                            @event) =>
+                                                                                           {
+                                                                                               Console.WriteLine($"Event appeared {@event.OriginalEventNumber}");
+                                                                                           })
+                                                                  .SetLastCheckpoint(lastCheckpoint)
+                                                                  .Build();
+
+            await subscription.Start(CancellationToken.None);
+        }
+
         private static async Task CatchupTest()
         {
             String connectionString = "ConnectTo=tcp://admin:changeit@127.0.0.1:1113;VerboseLogging=true;";
@@ -34,76 +84,30 @@
             Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-OrderAggregate").SetName("Test Catchup 1")
                                                                   //.SetLastCheckpoint(5000)
                                                                   .UseConnection(eventStoreConnection)
-                                                                  .AddEventAppearedHandler((upSubscription,
-                                                                                            @event) =>
-                                                                                           {
-                                                                                               Console.WriteLine($"{DateTime.UtcNow}: EventAppeared - Start on managed thread {Thread.CurrentThread.ManagedThreadId}");
+                                                                  //.AddEventAppearedHandler((upSubscription,
+                                                                  //                          @event) =>
+                                                                  //                         {
+                                                                  //                             Console.WriteLine($"{DateTime.UtcNow}: EventAppeared - Start on managed thread {Thread.CurrentThread.ManagedThreadId}");
 
-                                                                                               if (@event.OriginalEventNumber == 78) //simulate subscription dropped
-                                                                                               {
-                                                                                                   throw new Exception($"Engineered Exception");
+                                                                  //                             if (@event.OriginalEventNumber == 78) //simulate subscription dropped
+                                                                  //                             {
+                                                                  //                                 throw new Exception($"Engineered Exception");
 
-                                                                                                   try
-                                                                                                   {
-                                                                                                       throw new Exception($"Engineered Exception");
-                                                                                                   }
-                                                                                                   catch (Exception e)
-                                                                                                   {
-                                                                                                       Console
-                                                                                                           .WriteLine($"{DateTime.UtcNow}: About to call stop {Thread.CurrentThread.ManagedThreadId}");
+                                                                  //                                 try
+                                                                  //                                 {
+                                                                  //                                     throw new Exception($"Engineered Exception");
+                                                                  //                                 }
+                                                                  //                                 catch (Exception e)
+                                                                  //                                 {
+                                                                  //                                     Console
+                                                                  //                                         .WriteLine($"{DateTime.UtcNow}: About to call stop {Thread.CurrentThread.ManagedThreadId}");
 
-                                                                                                       //upSubscription.Stop();
-                                                                                                   }
-                                                                                               }
+                                                                  //                                     //upSubscription.Stop();
+                                                                  //                                 }
+                                                                  //                             }
 
-                                                                                               Console.WriteLine($"DELIVERED Event {@event.OriginalEventNumber}");
-                                                                                           })
-                                                                //.AddLiveProcessingStartedHandler(upSubscription =>
-                                                                //                                 {
-                                                                //                                     Console.WriteLine("Override LiveProcessingStarted");
-                                                                //                                 } )
-                                                                //.AddEventAppearedHandler((upSubscription,
-                                                                //                        @event) =>
-                                                                //{
-                                                                //  Console.WriteLine($"{DateTime.UtcNow}: EventAppeared - Start on managed thread {Thread.CurrentThread.ManagedThreadId}");
-                                                                //  Boolean isSignalled = manualResetEvent.WaitOne(TimeSpan.FromMilliseconds(2)); //This blocks the thread which AddSubscriptionDroppedHandler is running on...
-
-                                                                  //    if (isSignalled == false)
-                                                                  //    {
-                                                                  //        //I think this would carry on receiving events until the read buffer was empty.
-                                                                  //        //We can't throw an Exception here as it will bring the process down.
-                                                                  //        Console.WriteLine($"{DateTime.UtcNow}: Draining {@event.OriginalEventNumber} {Thread.CurrentThread.ManagedThreadId}");
-
-                                                                  //        //By returning, we will skip the POST and broadcasting lastCheckpoint
-                                                                  //        return;
-                                                                  //    }
-
-                                                                  //    if (@event.OriginalEventNumber == 78) //simulate subscription dropped
-                                                                  //    {
-                                                                  //        try
-                                                                  //        {
-                                                                  //            throw new Exception($"Engineered Exception");
-                                                                  //        }
-                                                                  //        catch(Exception e)
-                                                                  //        {
-                                                                  //            Console
-                                                                  //                .WriteLine($"{DateTime.UtcNow}: About to call stop {Thread.CurrentThread.ManagedThreadId}");
-
-                                                                  //            manualResetEvent.Reset(); //we don't want anymore events to get through
-                                                                  //            upSubscription.Stop();
-                                                                  //        }
-                                                                  //    }
-
-
-                                                                  //    Console.WriteLine($"{DateTime.UtcNow}: Posting  {Thread.CurrentThread.ManagedThreadId}");
-
-                                                                  //    //Here is where we would POST the event
-
-                                                                  //    //Here is where we broadcast the lastCheckpoint
-                                                                  //    Console.WriteLine($"{DateTime.UtcNow}: LastCheckpoint {@event.OriginalEventNumber}  {Thread.CurrentThread.ManagedThreadId}");
-
-
-                                                                  //})
+                                                                  //                             Console.WriteLine($"DELIVERED Event {@event.OriginalEventNumber}");
+                                                                  //                         })
                                                                   .DrainEventsAfterSubscriptionDropped()
                                                                   .AddSubscriptionDroppedHandler((upSubscription,
                                                                                                    reason,
@@ -117,7 +121,9 @@
                                                                                                      {
                                                                                                          //The user can make some changes (like adding headers)
                                                                                                          message.Headers.Add("Authorization", "Bearer someToken");
-                                                                                                     }).AddLogger(logger).Build();
+                                                                                                     })
+                                                                  .AddLogger(logger)
+                                                                  .Build();
 
             await subscription.Start(CancellationToken.None);
 
@@ -132,7 +138,8 @@
         /// <param name="args">The arguments.</param>
         private static async Task Main(String[] args)
         {
-            await Program.CatchupTest();
+            await CatchupTestWithLastCheckpoint();
+            //await Program.CatchupTest();
             //await Program.PersistentTest();
 
             Console.ReadKey();
