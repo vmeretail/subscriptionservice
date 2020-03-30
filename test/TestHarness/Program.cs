@@ -21,7 +21,7 @@
 
         private static async Task CatchupTestWithLastCheckpoint()
         {
-            String connectionString = "ConnectTo=tcp://admin:changeit@staging2.eposity.com:1113;VerboseLogging=true;";
+            String connectionString = "ConnectTo=tcp://admin:changeit@localhost:1113;VerboseLogging=true;";
 
             IEventStoreConnection eventStoreConnection = EventStoreConnection.Create(connectionString);
             await eventStoreConnection.ConnectAsync();
