@@ -16,6 +16,8 @@
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+    using NLog;
+    using NLog.Extensions.Logging;
     using Shouldly;
     using UnitTests;
     using Xunit;
@@ -90,8 +92,12 @@
 
             this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
             this.EndPointUrl1 = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events1";
+            
+            LogManager.LoadConfiguration("nlog.config");
 
-            this.Logger = new LoggerFactory().CreateLogger("PersistentSubscriptionsTests");
+            NLogLoggerFactory loggerFactory = new NLogLoggerFactory();
+            loggerFactory.AddNLog();
+            this.Logger = loggerFactory.CreateLogger("PersistentSubscriptionsTests");
         }
 
         #endregion
