@@ -1,12 +1,16 @@
 namespace Core3WorkerServiceExample
 {
     using System;
+    using System.Collections.Generic;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
+    using SubscriptionService;
+    using SubscriptionService.Builders;
+    using SubscriptionService.Extensions;
 
     public class Worker : BackgroundService
     {
@@ -52,19 +56,7 @@ namespace Core3WorkerServiceExample
             this.Connection = EventStoreConnection.Create(Worker.EventStoreConnectionString);
             await this.Connection.ConnectAsync();
 
-            //TODO: Fix this
-
-            // New up the Subscription Service instance via SubscriptionServiceBuilder
-            //var subscription = PersistentSubscriptionBuilder.Create("$ce-TestStream", "TestGroup1")
-            //                                                .UseConnection(this.Connection)
-            //                                                .DeliverTo(new Uri("http://localhost/api/events"))
-            //                                                .UseEventFactory(new WorkerEventFactory())
-            //                                                .AddLogger(this.Logger)
-            //                                                .Build();
-
-            // Use this event handler to wire up custom processing on each event appearing at the Persistent Subscription, an example use for this is 
-            // adding a Authorization token onto the HTTP POST (as demonstrated below)
-            // If there is no requirement to adjust the HTTP POST request then wiring up this event handler can be ommitted.
+            this.CurrentSubscriptions = new List<Subscription>();
 
             await base.StartAsync(cancellationToken);
         }
@@ -75,6 +67,12 @@ namespace Core3WorkerServiceExample
         /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
+            // Stop all running subscriptions
+            foreach (Subscription currentSubscription in this.CurrentSubscriptions)
+            {
+                currentSubscription.Stop();
+            }
+
             // Close the ES Connection
             this.Logger.LogInformation("About to close EventStore Connection");
             this.Connection.Close();
@@ -82,6 +80,8 @@ namespace Core3WorkerServiceExample
             this.Logger.LogInformation("About to Stop Worker Service");
             await base.StopAsync(cancellationToken);
         }
+
+        private List<Subscription> CurrentSubscriptions;
 
         /// <summary>
         /// This method is called when the <see cref="T:Microsoft.Extensions.Hosting.IHostedService" /> starts. The implementation should return a task that represents
@@ -95,23 +95,46 @@ namespace Core3WorkerServiceExample
             // update the Url below
             String endpointUrl = "https://enyaw1mc4if0j.x.pipedream.net/";
 
-            // Setup a list of persistent subscription objects, each one of these will represent a Persistent Subscription in the Event Store - Competing Consumers tab
-            // Each subscription allows the setting of the following values:
-            // Stream Name - the name of the Stream that will be listened to for Events
-            // Group Name - Name for the Group this will be used for display purposes in the Event Store UI
-            // EndPointUrl - HTTP Url that the event data will be POSTed to
-            // Number of Concurrent Messages - THe number of messages that will be concurrently processed by this subscription
-            // Max Retry Count - Number of times that the message will be retried if the first POST to the endpoint fails before it is NAK'd and parked in Event Store
-            // Stream Start Position - Position that the persistent subscription will start form, this will normally be zero but this value can be used to ignore events
-            //                         in a stream for example the events are malformed so you wish not to process these
+            // Setup a list of subscription objects, each one of these will represent a Persistent Subscription in the Event Store - Competing Consumers tab or 
+            // a CatchUp Subscription
+
+            // Each persistent subscription allows the setting of the following values on the Create() method:
+            //      Stream Name - the name of the Stream that will be listened to for Events
+            //      Group Name - Name for the Group this will be used for display purposes in the Event Store UI
+
+            // Each catchup subscription allows the setting of the following values on the Create() method:
+            //      Stream Name - the name of the Stream that will be listened to for Events
+
+            // The other options that can be set on a subscription are as follows:
+            // UseConnection - The event store connection to be used by the subscription
+            // DeliverTo - The endpoint Uri that the events will be delivered to
+            // AddLogger - Allows a custom logger to be injected that implements the Microsoft ILogger interface
+            // UseEventFactory - Specify a custom factory that allows making changes to the events before they are posted
+            //                   to the consumer
+            // AddEventAppearedHandler - Allows the setting of a custom method to be executed when an event has appeared, this allows the addition
+            //                           of custom HTTP headers such as authentication tokens
+            // AddSubscriptionDroppedHandler - Allows the setting of a custom method that will be called when a subscription has been marked as dropped
+            //                                 by EventStore
+            // AutoAckEvents - Setup the subscription to automatically acknowledge events
+            // ManuallyAckEvents - Setup the subscription to manually acknowledge events
+            // SetInFlightLimit - Set the number of in flight messages for the subscription
+            // WithPersistentSubscriptionSettings - Allows the passing in of the Event Store Client API PersistentSubscriptionSettings object
+            // LogAllEvents - Log all the events to trace as they are being processed
+            // LogEventsOnError - Log the events to trace as they are being processed if an error occurs
+            // WithUserName - Set the user name to be used for the connection if not the default value
+            // WithPassword - Set the password to be used for the connection if not the default value
+
             this.Logger.LogInformation("About to Get Subscription Configuration");
-            //List<Subscription> subscriptions = new List<Subscription>();
-            //subscriptions.Add(Subscription.Create("$ce-TestStream", "TestGroup", endpointUrl, numberOfConcurrentMessages:2, maxRetryCount:1));
 
-            // Start the subscription service, this will create and connect to the subscriptions defined in your configuration
-            //await this.SubscriptionService.Start(subscriptions, stoppingToken);
+            Subscription subscription = PersistentSubscriptionBuilder.Create("$ce-TestStream", "TestGroup1")
+                                                                     .UseConnection(this.Connection)
+                                                                     .DeliverTo(new Uri(endpointUrl))
+                                                                     .AddLogger(this.Logger)
+                                                                     .UseEventFactory(new WorkerEventFactory()).Build();
 
-            //TODO: make this work again!
+            await subscription.Start(stoppingToken);
+
+            this.CurrentSubscriptions.Add(subscription);
         }
 
         /// <summary>
