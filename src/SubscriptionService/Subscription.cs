@@ -68,11 +68,9 @@
         /// Initializes a new instance of the <see cref="Subscription" /> class.
         /// </summary>
         /// <param name="subscriptionBuilder">The subscription builder.</param>
-        /// <exception cref="NullReferenceException">
-        /// subscriptionBuilder cannot be null
+        /// <exception cref="NullReferenceException">subscriptionBuilder cannot be null
         /// or
-        /// EventStoreConnection cannot be null
-        /// </exception>
+        /// EventStoreConnection cannot be null</exception>
         internal Subscription(SubscriptionBuilder subscriptionBuilder)
         {
             if (subscriptionBuilder == null)
@@ -102,7 +100,7 @@
         /// Gets or sets a value indicating whether this instance is started.
         /// </summary>
         /// <value>
-        /// <c>true</c> if this instance is started; otherwise, <c>false</c>.
+        ///   <c>true</c> if this instance is started; otherwise, <c>false</c>.
         /// </value>
         public Boolean IsStarted { get; set; }
 
