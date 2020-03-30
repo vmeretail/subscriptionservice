@@ -7,6 +7,7 @@
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -76,10 +77,7 @@
         {
             this.TestsFixture = data;
 
-            Type type = output.GetType();
-            FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
-            ITest test = (ITest)testMember.GetValue(output);
-            this.TestName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
+            this.TestName = this.TestsFixture.GenerateTestName(output);
 
             this.TestsFixture.LogMessageToTrace($"{this.TestName} starting - in constructor");
 
