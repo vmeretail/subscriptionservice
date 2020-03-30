@@ -13,8 +13,11 @@ namespace SubscriptionService.IntegrationTests
     using EventStore.ClientAPI;
     using Extensions;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Configuration;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+    using NLog;
+    using NLog.Extensions.Logging;
     using Shouldly;
     using Xunit;
     using Xunit.Abstractions;
@@ -96,7 +99,12 @@ namespace SubscriptionService.IntegrationTests
             this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
             this.EndPointUrl1 = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events1";
 
-            this.Logger = new LoggerFactory().CreateLogger("CatchupSubscriptionsTests");
+            LogManager.LoadConfiguration("nlog.config");
+
+            NLogLoggerFactory loggerFactory = new NLogLoggerFactory();
+            loggerFactory.AddNLog();
+            this.Logger = loggerFactory.CreateLogger("CatchupSubscriptionsTests");
+
         }
 
         #endregion
