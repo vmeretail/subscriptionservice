@@ -24,6 +24,29 @@ namespace SubscriptionService.IntegrationTests
     using ILogger = Microsoft.Extensions.Logging.ILogger;
     using SubscriptionService.Extensions;
 
+    public static class Helper{
+        public static List<EventData> GenerateEvents(Int32 numberOfEvents)
+        {
+            List<EventData> events = new List<EventData>();
+
+            for (Int32 i = 0; i < numberOfEvents; i++)
+            {
+                var @event = new
+                             {
+                                 id = i + 1
+                             };
+
+                Guid eventId = Guid.NewGuid();
+                String eventAsString = JsonConvert.SerializeObject(@event);
+                EventData eventData = new EventData(eventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
+
+                events.Add(eventData);
+            }
+
+            return events;
+        }
+    }
+
     [Collection("Database collection")]
     public class CatchupSubscriptionsTests : IClassFixture<TestsFixture>, IDisposable
     {
@@ -338,26 +361,7 @@ namespace SubscriptionService.IntegrationTests
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
-        public List<EventData> GenerateEvents(Int32 numberOfEvents)
-        {
-            List < EventData > events = new List<EventData>();
 
-            for (Int32 i = 0; i < numberOfEvents; i++)
-            {
-                var @event = new
-                           {
-                               id = i+1
-                           };
-
-                Guid eventId = Guid.NewGuid();
-                String eventAsString = JsonConvert.SerializeObject(@event);
-                EventData eventData = new EventData(eventId, "Test", true, Encoding.Default.GetBytes(eventAsString), null);
-
-                events.Add(eventData);
-            }
-
-            return events;
-        }
 
   
         [Fact]
@@ -381,7 +385,7 @@ namespace SubscriptionService.IntegrationTests
             String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
 
             //Generate 100 events
-            var events = GenerateEvents(totalEvents);
+            var events = Helper.GenerateEvents(totalEvents);
 
             await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
 
@@ -456,7 +460,7 @@ namespace SubscriptionService.IntegrationTests
             String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
 
             //Generate 100 events
-            var events = GenerateEvents(totalEvents);
+            var events = Helper.GenerateEvents(totalEvents);
 
             await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
 

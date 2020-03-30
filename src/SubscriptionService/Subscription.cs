@@ -128,6 +128,20 @@
             this.IsStarted = true;
         }
 
+        public async Task Resume(CancellationToken cancellationToken)
+        {
+            //TODO:
+
+            //We should ensure that we have stopped
+            if (this.IsStarted)
+            {
+                throw new InvalidOperationException("Subscription already started.");
+            }
+
+            await this.Start(cancellationToken);
+
+        }
+
         /// <summary>
         /// Stops this instance.
         /// </summary>
