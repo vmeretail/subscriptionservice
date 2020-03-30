@@ -173,6 +173,34 @@
             return eventAsString;
         }
 
+        public async Task<List<String>> GetEvents(String endpointUrl,
+                                           HttpClient readmodelHttpClient,Int32 expectedEventCount)
+        {
+            List<String> eventsAsStrings = null;
+
+            await Retry.For(async () =>
+                            {
+                                HttpResponseMessage responseMessage = await readmodelHttpClient.GetAsync(endpointUrl, CancellationToken.None);
+
+                                responseMessage.EnsureSuccessStatusCode();
+
+                                String responseContent = await responseMessage.Content.ReadAsStringAsync();
+
+                                if (String.IsNullOrEmpty(responseContent))
+                                {
+                                    throw new Exception();
+                                }
+
+                                JArray array = JArray.Parse(responseContent);
+
+                                array.Count.ShouldBe(expectedEventCount);
+
+                                eventsAsStrings = array.ToObject<List<Object>>().Select(x => x.ToString()).ToList();
+                            });
+
+            return eventsAsStrings;
+        }
+
         /// <summary>
         /// Gets the HTTP client.
         /// </summary>

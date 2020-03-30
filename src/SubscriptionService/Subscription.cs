@@ -324,8 +324,20 @@
                     await this.EventAppeared(resolvedEvent, consumer, cancellationToken);
                 }
 
-                //TODO: I suspect this is where we emit information for lastCheckoint
-                //@event.OriginalEventNumber - catchup Name
+
+                //TODO: Make this a bit clearer
+                //Only broadcast when the checkpointCount has been matched
+
+                Int64 eventCount = resolvedEvent.OriginalEventNumber + 1;
+
+                if (catchupSubscriptionBuilder.LastCheckpointChanged != null)
+                {
+                    if ((eventCount % catchupSubscriptionBuilder.CheckpointCount == 0))
+                    {
+                        //Client wants to know about this.
+                        catchupSubscriptionBuilder.LastCheckpointChanged(eventStoreCatchUpSubscription.SubscriptionName, resolvedEvent.OriginalEventNumber);
+                    }
+                }
             }
             catch(Exception e)
             {
