@@ -56,6 +56,11 @@
         /// </summary>
         internal Action<EventStoreCatchUpSubscription, SubscriptionDropReason, Exception> SubscriptionDropped;
 
+        /// <summary>
+        /// The failed event handler
+        /// </summary>
+        internal Action<String,String,ResolvedEvent> FailedEventHandler;
+
         #endregion
 
         #region Constructors
@@ -98,6 +103,18 @@
         {
             this.LastCheckpointChanged = lastCheckpointChanged;
             this.CheckpointCount = checkpointCount;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds the failed event handler.
+        /// </summary>
+        /// <param name="failedEventHandler">The failed event handler.</param>
+        /// <returns></returns>
+        public CatchupSubscriptionBuilder AddFailedEventHandler(Action<String, String, ResolvedEvent> failedEventHandler)
+        {
+            this.FailedEventHandler = failedEventHandler;
 
             return this;
         }
