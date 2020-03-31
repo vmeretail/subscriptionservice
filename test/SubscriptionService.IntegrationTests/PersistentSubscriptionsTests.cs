@@ -696,7 +696,7 @@
                                                                                                                                        eventsDelivered.Add(@event);
                                                                                                                                        Thread.Sleep(10);
                                                                                                                                    }).AddLogger(this.Logger)
-                                                                     .AddSubscriptionDroppedHandler((@base,
+                                                                     .AddSubscriptionDroppedHandler((s,
                                                                                                      reason,
                                                                                                      arg3) =>
                                                                                                     {
