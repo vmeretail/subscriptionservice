@@ -461,7 +461,7 @@ namespace SubscriptionService.IntegrationTests
             var catchUpSubscriptionSettings = new CatchUpSubscriptionSettings(1, 1, true, true,"$ce-SalesTransactionAggregate");
 
             // 2. Act
-            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-SalesTransactionAggregate")
+            Subscription subscription = CatchupSubscriptionBuilder.Create(streamName)
                                                                   .SetName("CatchupTest1")
                                                                   .UseConnection(eventStoreConnection)
                                                                   .WithCatchUpSubscriptionSettings(catchUpSubscriptionSettings)
@@ -491,7 +491,7 @@ namespace SubscriptionService.IntegrationTests
 
             await subscription.Start(CancellationToken.None);
 
-            manualResetEvent.WaitOne(TimeSpan.FromSeconds(30));
+            manualResetEvent.WaitOne(TimeSpan.FromSeconds(10));
 
             // 3. Assert
             lastCheckpointBroadcasts.ShouldBe(totalEvents/ checkPointBroadcastFrequency);
