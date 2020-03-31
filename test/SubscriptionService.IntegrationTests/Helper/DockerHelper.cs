@@ -2,8 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.IO;
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
@@ -12,19 +10,16 @@
     using System.Text;
     using System.Threading;
     using Ductus.FluentDocker.Builders;
-    using Ductus.FluentDocker.Common;
     using Ductus.FluentDocker.Model.Builders;
     using Ductus.FluentDocker.Services;
     using Ductus.FluentDocker.Services.Extensions;
     using EventStore.ClientAPI.Common.Log;
     using EventStore.ClientAPI.Projections;
     using EventStore.ClientAPI.SystemData;
-    using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
     using Shouldly;
 
     /// <summary>
-    /// 
     /// </summary>
     public class DockerHelper
     {
@@ -165,7 +160,6 @@
             }
 
             esConfig = configurationList[eventstoreVersion];
-            
 
             return esConfig;
         }
@@ -174,35 +168,18 @@
         /// Starts the containers for scenario run.
         /// </summary>
         /// <param name="testname">The testname.</param>
-        public void StartContainersForScenarioRun(String testname)
+        public void StartContainersForScenarioRun(String testname,
+                                                  String logfileDirectory)
         {
             this.TestId = Guid.NewGuid();
 
             this.TestNetwork = new Builder().UseNetwork($"test-network-{Guid.NewGuid():N}").Build();
-            String mountDir = String.Empty; //Don't use mounted directories on CI
-
-            String? environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            Boolean isDevelopment = true;
-
-            if (environment != null)
-            {
-                isDevelopment = environment == EnvironmentName.Development;
-            }
-
-            if (isDevelopment)
-            {
-                mountDir = FdOs.IsWindows()
-                    ? $"C:\\home\\forge\\subscriptionservice\\trace\\{DateTime.Now:yyyyMMdd}\\{testname}"
-                    : $"//home//forge//subscriptionservice//trace//{DateTime.Now:yyyyMMdd}//{testname}//";
-
-                //Create the destination directory rather than relying on Docker library.
-                Directory.CreateDirectory(mountDir);
-            }
 
             EventStoreDockerConfiguration eventStoreDockerConfiguration = DockerHelper.GetEventStoreDockerConfiguration();
             this.TestsFixture.EventStoreDockerConfiguration = eventStoreDockerConfiguration;
 
-            this.EventStoreContainer = DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, mountDir, this.TestsFixture);
+            this.EventStoreContainer =
+                DockerHelper.CreateEventStoreContainer($"eventstore{this.TestId.ToString("N")}", this.TestNetwork, logfileDirectory, this.TestsFixture);
             this.DummyRESTContainer = DockerHelper.CreateDummyRESTContainer($"vmedummyjson{this.TestId.ToString("N")}", this.TestNetwork, ""); //No trace written
 
             this.EventStoreContainer.Start();
@@ -247,7 +224,7 @@
                 this.TestsFixture.LogMessageToTrace($"Creating projection [{"EventDebugging"}]");
                 debugProjectionManager.CreateContinuousAsync("Debugging", projectionString, new UserCredentials("admin", "changeit")).Wait();
             }
-            catch (Exception e)
+            catch(Exception e)
             {
                 this.TestsFixture.LogMessageToTrace($"Projection [{"EventDebugging"}] error [{e}]");
             }

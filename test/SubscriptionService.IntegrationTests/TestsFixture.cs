@@ -23,7 +23,24 @@
     /// <seealso cref="System.IDisposable" />
     public class TestsFixture : IDisposable
     {
+        #region Fields
+
+        /// <summary>
+        /// The event store docker configuration
+        /// </summary>
         public EventStoreDockerConfiguration EventStoreDockerConfiguration;
+
+        /// <summary>
+        /// The log directory
+        /// </summary>
+        public String LogDirectory;
+
+        /// <summary>
+        /// The logger
+        /// </summary>
+        private Logger Logger;
+
+        #endregion
 
         #region Constructors
 
@@ -32,7 +49,24 @@
         /// </summary>
         public TestsFixture()
         {
+            this.Logger = LogManager.GetLogger("SubscriptionService");
 
+            // Get the file target from nlog config
+            FileTarget fileTarget = LogManager.Configuration.FindTargetByName<FileTarget>("logfile");
+
+            // Get the filename
+            LogEventInfo logEventInfo = new LogEventInfo
+                                        {
+                                            TimeStamp = DateTime.Now
+                                        };
+
+            String fileName = fileTarget.FileName.Render(logEventInfo);
+            FileInfo fi = new FileInfo(fileName);
+
+            // Make sure the trace directory exists
+            Directory.CreateDirectory(fi.DirectoryName);
+
+            this.LogDirectory = fi.DirectoryName;
         }
 
         #endregion
@@ -79,7 +113,7 @@
 
                                 if (retrievedEvents.Any() == false)
                                 {
-                                    throw new Exception($"No events returned");
+                                    throw new Exception("No events returned");
                                 }
 
                                 foundEvents.AddRange(retrievedEvents.Select(x => Guid.Parse(x)));
@@ -144,6 +178,27 @@
         }
 
         /// <summary>
+        /// Generates the name of the test.
+        /// </summary>
+        /// <param name="output">The output.</param>
+        /// <returns></returns>
+        public String GenerateTestName(ITestOutputHelper output)
+        {
+            Type type = output.GetType();
+            FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
+            ITest test = (ITest)testMember.GetValue(output);
+            String testName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
+
+            testName = testName.Replace("(", "");
+            testName = testName.Replace(")", "");
+            testName = testName.Replace(":", "_");
+            testName = testName.Replace(",", "_");
+            testName = testName.Replace(" ", "");
+
+            return testName;
+        }
+
+        /// <summary>
         /// Gets the event.
         /// </summary>
         /// <param name="endpointUrl">The endpoint URL.</param>
@@ -175,8 +230,16 @@
             return eventAsString;
         }
 
+        /// <summary>
+        /// Gets the events.
+        /// </summary>
+        /// <param name="endpointUrl">The endpoint URL.</param>
+        /// <param name="readmodelHttpClient">The readmodel HTTP client.</param>
+        /// <param name="expectedEventCount">The expected event count.</param>
+        /// <returns></returns>
         public async Task<List<String>> GetEvents(String endpointUrl,
-                                           HttpClient readmodelHttpClient,Int32 expectedEventCount)
+                                                  HttpClient readmodelHttpClient,
+                                                  Int32 expectedEventCount)
         {
             List<String> eventsAsStrings = null;
 
@@ -231,43 +294,8 @@
 
             Logger logger = LogManager.GetLogger("SubscriptionService");
 
-            // Get the file target from nlog config
-            FileTarget fileTarget = LogManager.Configuration.FindTargetByName<FileTarget>("logfile");
-
-            // Get the filename
-            LogEventInfo logEventInfo = new LogEventInfo
-                                        {
-                                            TimeStamp = DateTime.Now
-                                        };
-            String fileName = fileTarget.FileName.Render(logEventInfo);
-            FileInfo fi = new FileInfo(fileName);
-
-            // Make sure the trace directory exists
-            Directory.CreateDirectory(fi.DirectoryName);
-
             // Write the log
             logger.Info(traceMessage);
-        }
-
-        /// <summary>
-        /// Generates the name of the test.
-        /// </summary>
-        /// <param name="output">The output.</param>
-        /// <returns></returns>
-        public String GenerateTestName(ITestOutputHelper output)
-        {
-            Type type = output.GetType();
-            FieldInfo testMember = type.GetField("test", BindingFlags.Instance | BindingFlags.NonPublic);
-            ITest test = (ITest)testMember.GetValue(output);
-            String testName = test.DisplayName.Split(".").Last(); //Make the name a little more readable.
-
-            testName = testName.Replace("(", "");
-            testName = testName.Replace(")", "");
-            testName = testName.Replace(":", "_");
-            testName = testName.Replace(",", "_");
-            testName = testName.Replace(" ", "");
-
-            return testName;
         }
 
         /// <summary>
