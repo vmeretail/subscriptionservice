@@ -491,7 +491,7 @@ namespace SubscriptionService.IntegrationTests
 
             await subscription.Start(CancellationToken.None);
 
-            manualResetEvent.WaitOne(TimeSpan.FromSeconds(10));
+            manualResetEvent.WaitOne(TimeSpan.FromSeconds(30));
 
             // 3. Assert
             lastCheckpointBroadcasts.ShouldBe(totalEvents/ checkPointBroadcastFrequency);
