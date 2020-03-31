@@ -65,7 +65,7 @@ If not set, Auto ACKing is off.
 #### SetInFlightLimit
 
 Set the number of inflight messages for the subscription.
-Values <= 0 are no permitted.
+Values <= 0 are not permitted.
 
 ```
 .SetInFlightLimit(25)
@@ -121,7 +121,7 @@ By setting DrainEventsAfterSubscriptionDropped, you are instructing the library 
 
 #### SetLastCheckpoint
 
-When you create a Catchup Subscription, and ened to resum from a specific checkpoint, simply use this method.
+When you create a Catchup Subscription, and need to resume from a specific checkpoint, simply use this method.
 
 ```
 .SetLastCheckpoint(500)
@@ -244,29 +244,3 @@ The example below shows an authorization token being added to the header.
     message.Headers.Add("Authorization", "Bearer someToken");
     })
 ```
-
-If you need to alter the events before you post, you can create your own EventFactory and inject it when creating the Subscription Service:
-
-```
-this.SubscriptionService = new SubscriptionService(new WorkerEventFactory(),this.Connection);
-```
-
-```
-internal class WorkerEventFactory : IEventFactory
-{
-    public String ConvertFrom(PersistedEvent persistedEvent)
-    {
-        String json = Encoding.Default.GetString(persistedEvent.Data);
-        dynamic expandoObject = new ExpandoObject();
-        dynamic temp = JsonConvert.DeserializeAnonymousType(json, expandoObject);
-
-        temp.EventId = persistedEvent.EventId;
-        temp.EventType = persistedEvent.EventType;
-        temp.EventDateTime = persistedEvent.Created;
-        temp.Metadata = Encoding.Default.GetString(persistedEvent.Metadata);
-
-        return JsonConvert.SerializeObject(temp);
-    }
-}
-```
-
