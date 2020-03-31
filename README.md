@@ -9,6 +9,10 @@ Lightweight and easy to use library, which allows you to manage delivering event
 | **NuGet** | [![nuget](https://img.shields.io/nuget/v/EventStore.SubscriptionService.svg)](https://www.nuget.org/packages/EventStore.SubscriptionService/) 
 | **Downloads**| [![nuget](https://img.shields.io/nuget/dt/EventStore.SubscriptionService.svg)](https://www.nuget.org/packages/EventStore.SubscriptionService/) |
 
+## Supported Event Store versions
+ ![EventStorev403](https://img.shields.io/badge/eventstore-v4.0.3%20tested-green)
+ ![EventStorev507](https://img.shields.io/badge/eventstore-v5.0.7%20tested-green)
+ ![EventStorev600preview3](https://img.shields.io/badge/eventstore-v6.0.0%20preview3%20tested-green)
 
 ## Nuget
 
