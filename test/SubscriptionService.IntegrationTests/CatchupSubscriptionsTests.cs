@@ -112,7 +112,7 @@ namespace SubscriptionService.IntegrationTests
             this.DockerHelper = new DockerHelper(data);
 
             // Start the Event Store & Dummy API
-            this.DockerHelper.StartContainersForScenarioRun(this.TestName);
+            this.DockerHelper.StartContainersForScenarioRun(this.TestName, this.TestsFixture.LogDirectory);
 
             this.ReadModelHttpClient = this.TestsFixture.GetHttpClient();
 
