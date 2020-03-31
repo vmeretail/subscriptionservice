@@ -361,9 +361,71 @@ namespace SubscriptionService.IntegrationTests
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
+        [Fact]
+        public async Task CatchupSubscriptions_EventDeliveryFailed_EventIsAddedToDeadLetterList()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
+
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
+
+            // 1. Arrange
+            String aggregateName = "SalesTransactionAggregate";
+            Guid aggregateId = Guid.NewGuid();
+            String streamName = $"{aggregateName}-{aggregateId:N}";
+
+            // Setup some dummy events in the Event Store
+            var events = Helper.GenerateEvents(10);
+
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
+
+            // Setup a subscription configuration to deliver the events to the dummy REST
+            List<ResolvedEvent> failedEvents = new List<ResolvedEvent>();
+
+            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-SalesTransactionAggregate").SetName("CatchupTest1")
+                                                                  .UseConnection(eventStoreConnection)
+                                                                  .AddEventAppearedHandler((upSubscription,
+                                                                                            @event) =>
+                                                                  {
+                                                                      this.TestsFixture.LogMessageToTrace($"{DateTime.UtcNow}: EventAppeared - Start on managed thread {Thread.CurrentThread.ManagedThreadId}");
+
+                                                                      if (@event.OriginalEventNumber == 5) //simulate delivery failure
+                                                                      {
+                                                                          throw new Exception($"Engineered Exception");
+                                                                      }
+                                                                      this.TestsFixture.LogMessageToTrace($"DELIVERED Event {@event.OriginalEventNumber}");
+                                                                  })
+                                                                  .AddFailedEventHandler((streamName,
+                                                                                          subscriptionName,
+                                                                                          resolvedEvent) =>
+                                                                                         {
+                                                                                             failedEvents.Add(resolvedEvent);
+                                                                                             this.TestsFixture.LogMessageToTrace($"Event [{resolvedEvent.OriginalEvent.EventNumber}] failed");
+                                                                                         })
+                                                                  .AddLogger(this.Logger).Build();
+
+            // 2. Act
+            // Start the subscription service
+            await subscription.Start(CancellationToken.None);
+
+            await Task.Delay(5000);
+
+            // 3. Assert
+            failedEvents.ShouldHaveSingleItem();
+            failedEvents.Single().OriginalEventNumber.ShouldBe(5);
+
+            // 4. Cleanup
+            subscription.Stop();
+            eventStoreConnection.Close();
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
+        }
 
 
-  
+
         [Fact]
         public async Task CatchupSubscriptions_LastCheckpointChanged_VerifyBroadcasts()
         {
@@ -399,7 +461,7 @@ namespace SubscriptionService.IntegrationTests
             var catchUpSubscriptionSettings = new CatchUpSubscriptionSettings(1, 1, true, true,"$ce-SalesTransactionAggregate");
 
             // 2. Act
-            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-SalesTransactionAggregate")
+            Subscription subscription = CatchupSubscriptionBuilder.Create(streamName)
                                                                   .SetName("CatchupTest1")
                                                                   .UseConnection(eventStoreConnection)
                                                                   .WithCatchUpSubscriptionSettings(catchUpSubscriptionSettings)
@@ -440,6 +502,7 @@ namespace SubscriptionService.IntegrationTests
             eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
+        
         [Fact]
         //[InlineData(100,49)] - Issue #120
         public async Task CatchupSubscriptions_SetLastCheckpoint_StartsAtSelectedCheckpoint()

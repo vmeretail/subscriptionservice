@@ -97,7 +97,7 @@ namespace SubscriptionService.UnitTests
         public void CatchupSubscriptionBuilder_SetEventLogging_ValuesUpdated()
         {
             // 1. Arrange
-            SubscriptionBuilder subscriptionBuilder = PersistentSubscriptionBuilder.Create(TestData.StreamName, TestData.GroupName);
+            SubscriptionBuilder subscriptionBuilder = CatchupSubscriptionBuilder.Create(TestData.StreamName);
 
             // 2. Act
             subscriptionBuilder.LogAllEvents().LogEventsOnError();
@@ -114,7 +114,7 @@ namespace SubscriptionService.UnitTests
         public void CatchupSubscriptionBuilder_SetUsernameAndPassword_ValuesUpdated()
         {
             // 1. Arrange
-            SubscriptionBuilder subscriptionBuilder = PersistentSubscriptionBuilder.Create(TestData.StreamName, TestData.GroupName);
+            SubscriptionBuilder subscriptionBuilder = CatchupSubscriptionBuilder.Create(TestData.StreamName);
             String username = "TestUser1";
             String password = "TestPassword1";
 
@@ -130,16 +130,33 @@ namespace SubscriptionService.UnitTests
         /// Catchups the subscription builderr use connection added subscription created.
         /// </summary>
         [Fact]
-        public void CatchupSubscriptionBuilderr_UseConnectionAdded_SubscriptionCreated()
+        public void CatchupSubscriptionBuilder_UseConnectionAdded_SubscriptionCreated()
         {
             // 1. Arrange
-            SubscriptionBuilder subscriptionBuilder = CatchupSubscriptionBuilder.Create(TestData.StreamName).UseConnection(this.EventStoreConnectionMock.Object);
+            SubscriptionBuilder subscriptionBuilder = CatchupSubscriptionBuilder.Create(TestData.StreamName);
 
             // 2. Act
+            subscriptionBuilder.UseConnection(this.EventStoreConnectionMock.Object);
 
             // 3. Assert
             subscriptionBuilder.ShouldNotBeNull();
             subscriptionBuilder.EventStoreConnection.ShouldNotBeNull();
+        }
+
+        [Fact]
+        public void CatchupSubscriptionBuilder_AddFailedEventHandler_SubscriptionCreated()
+        {
+            // 1. Arrange
+            CatchupSubscriptionBuilder subscriptionBuilder = CatchupSubscriptionBuilder.Create(TestData.StreamName);
+
+            // 2. Act
+            subscriptionBuilder.AddFailedEventHandler((streamName,
+                                                       subscriptionName,
+                                                       resolvedEvent) =>
+                                                      {
+                                                      });
+            // 3. Assert
+            subscriptionBuilder.FailedEventHandler.ShouldNotBeNull();
         }
 
         #endregion

@@ -1,6 +1,7 @@
 ﻿namespace SubscriptionService
 {
     using System;
+    using System.Data;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
@@ -342,6 +343,9 @@
                 this.SignalledToStop = true;
 
                 this.Logger.LogWarning($"EventAppearedFromCatchupSubscription Exception {resolvedEvent.OriginalEventNumber}({resolvedEvent.OriginalEvent.EventType}) on managed thread {Thread.CurrentThread.ManagedThreadId} {e.Message}");
+
+                // Call the clients failed handler
+                catchupSubscriptionBuilder.FailedEventHandler?.Invoke(catchupSubscriptionBuilder.StreamName, eventStoreCatchUpSubscription.SubscriptionName, resolvedEvent);
 
                 //TODO: Log out Subscription Name? - resolvedEvent.Event might be null
                 //this.Logger.LogError(e, $"Exception occured from CatchupSubscription {resolvedEvent.Event.EventId}");

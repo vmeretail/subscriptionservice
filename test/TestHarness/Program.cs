@@ -81,33 +81,39 @@
             //RequestBin
             Uri uri = new Uri("https://ennxdwa7hkx8e.x.pipedream.net/");
 
-            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-OrderAggregate").SetName("Test Catchup 1")
+            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-TestStream").SetName("Test Catchup 1")
                                                                   //.SetLastCheckpoint(5000)
                                                                   .UseConnection(eventStoreConnection)
-                                                                  //.AddEventAppearedHandler((upSubscription,
-                                                                  //                          @event) =>
-                                                                  //                         {
-                                                                  //                             Console.WriteLine($"{DateTime.UtcNow}: EventAppeared - Start on managed thread {Thread.CurrentThread.ManagedThreadId}");
+                                                                  .AddEventAppearedHandler((upSubscription,
+                                                                                            @event) =>
+                                                                                           {
+                                                                                               Console.WriteLine($"{DateTime.UtcNow}: EventAppeared - Start on managed thread {Thread.CurrentThread.ManagedThreadId}");
 
-                                                                  //                             if (@event.OriginalEventNumber == 78) //simulate subscription dropped
-                                                                  //                             {
-                                                                  //                                 throw new Exception($"Engineered Exception");
+                                                                                               if (@event.OriginalEventNumber == 5) //simulate subscription dropped
+                                                                                               {
+                                                                                                   throw new Exception($"Engineered Exception");
 
-                                                                  //                                 try
-                                                                  //                                 {
-                                                                  //                                     throw new Exception($"Engineered Exception");
-                                                                  //                                 }
-                                                                  //                                 catch (Exception e)
-                                                                  //                                 {
-                                                                  //                                     Console
-                                                                  //                                         .WriteLine($"{DateTime.UtcNow}: About to call stop {Thread.CurrentThread.ManagedThreadId}");
+                                                                                                   try
+                                                                                                   {
+                                                                                                       throw new Exception($"Engineered Exception");
+                                                                                                   }
+                                                                                                   catch (Exception e)
+                                                                                                   {
+                                                                                                       Console
+                                                                                                           .WriteLine($"{DateTime.UtcNow}: About to call stop {Thread.CurrentThread.ManagedThreadId}");
 
-                                                                  //                                     //upSubscription.Stop();
-                                                                  //                                 }
-                                                                  //                             }
+                                                                                                       //upSubscription.Stop();
+                                                                                                   }
+                                                                                               }
 
-                                                                  //                             Console.WriteLine($"DELIVERED Event {@event.OriginalEventNumber}");
-                                                                  //                         })
+                                                                                               Console.WriteLine($"DELIVERED Event {@event.OriginalEventNumber}");
+                                                                                           })
+                                                                  //.AddFailedEventHandler((streamName,
+                                                                  //                        subscriptionName,
+                                                                  //                        resolvedEvent) =>
+                                                                  //                       {
+                                                                  //                           Console.WriteLine($"Event [{resolvedEvent.OriginalEvent.EventNumber}] failed");
+                                                                  //                       })
                                                                   .DrainEventsAfterSubscriptionDropped().AddSubscriptionDroppedHandler((upSubscription,
                                                                                                                                         reason,
                                                                                                                                         arg3) =>
@@ -135,8 +141,8 @@
         /// <param name="args">The arguments.</param>
         private static async Task Main(String[] args)
         {
-            await CatchupTestWithLastCheckpoint();
-            //await Program.CatchupTest();
+            //await CatchupTestWithLastCheckpoint();
+            await Program.CatchupTest();
             //await Program.PersistentTest();
 
             Console.ReadKey();
