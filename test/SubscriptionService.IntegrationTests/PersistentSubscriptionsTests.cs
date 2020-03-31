@@ -2,19 +2,15 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
-    using System.Reflection;
-    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Builders;
     using EventStore.ClientAPI;
     using Extensions;
-    using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
@@ -84,13 +80,13 @@
             this.DockerHelper = new DockerHelper(data);
 
             // Start the Event Store & Dummy API
-            this.DockerHelper.StartContainersForScenarioRun(this.TestName);
+            this.DockerHelper.StartContainersForScenarioRun(this.TestName,this.TestsFixture.LogDirectory);
 
             this.ReadModelHttpClient = this.TestsFixture.GetHttpClient();
 
             this.EndPointUrl = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events";
             this.EndPointUrl1 = $"http://localhost:{this.DockerHelper.DummyRESTHttpPort}/events1";
-            
+
             LogManager.LoadConfiguration("nlog.config");
 
             NLogLoggerFactory loggerFactory = new NLogLoggerFactory();
@@ -125,50 +121,6 @@
             this.DockerHelper.StopContainersForScenarioRun();
 
             this.TestsFixture.LogMessageToTrace($"{this.TestName} stopped.");
-        }
-
-        [Fact]
-        public async Task PersistentSubscriptions_StreamStart_AsExpected()
-        {
-            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
-
-            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
-
-            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
-
-            // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
-
-            String aggregateName = "SalesTransactionAggregate";
-            Guid aggregateId = Guid.NewGuid();
-            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
-
-            var events = Helper.GenerateEvents(100);
-
-            await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
-
-            PersistentSubscriptionSettings persistentSubscriptionSettings = PersistentSubscriptionSettings.Create().StartFrom(50);
-
-            Int32 eventsProcessed = 0;
-
-            // 2. Act
-            Subscription subscription = PersistentSubscriptionBuilder.Create(streamName, "TestGroup1")
-                                                                     .UseConnection(eventStoreConnection)
-                                                                     .AddEventAppearedHandler((@base,
-                                                                                               @event) =>
-                                                                                              {
-                                                                                                  eventsProcessed++;
-                                                                                              })
-                                                                     .DeliverTo(new Uri(this.EndPointUrl))
-                                                                     .WithPersistentSubscriptionSettings(persistentSubscriptionSettings)
-                                                                     .AddLogger(this.Logger)
-                                                                     .Build();
-
-            await subscription.Start(CancellationToken.None);
-
-            await Task.Delay(5000);
-
-            eventsProcessed.ShouldBe(50);
         }
 
         /// <summary>
@@ -365,6 +317,129 @@
         }
 
         /// <summary>
+        /// Persistents the subscriptions event delivery event is delivered.
+        /// </summary>
+        [Fact]
+        public async Task PersistentSubscriptions_EventDelivery_StopCalled_NotAllEventsDelivered()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
+
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
+
+            // 1. Arrange
+            String aggregateName = "SalesTransactionAggregate";
+            Guid aggregateId = Guid.NewGuid();
+            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
+
+            List<Guid> eventsToCheck = new List<Guid>();
+            //Int32 expectedVersion = -1;
+
+            List<EventData> events = new List<EventData>();
+
+            //The 2000 could become Inline for ranges?
+            // Setup some dummy events in the Event Store
+            for (Int32 i = 0; i < 2000; i++)
+            {
+                var sale = new
+                           {
+                               AggregateId = aggregateId,
+                               EventId = Guid.NewGuid()
+                           };
+
+                String eventAsString = JsonConvert.SerializeObject(sale);
+                EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
+
+                events.Add(eventData);
+
+                //expectedVersion++;
+                eventsToCheck.Add(sale.EventId);
+            }
+
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
+
+            List<ResolvedEvent> eventsDelivered = new List<ResolvedEvent>();
+
+            // Setup a subscription configuration to deliver the events to the dummy REST
+            Subscription subscription = PersistentSubscriptionBuilder.Create(streamName, "TestGroup1").UseConnection(eventStoreConnection)
+                                                                     .DeliverTo(new Uri(this.EndPointUrl)).AddEventAppearedHandler((@base,
+                                                                                                                                    @event) =>
+                                                                                                                                   {
+                                                                                                                                       eventsDelivered.Add(@event);
+                                                                                                                                       Thread.Sleep(10);
+                                                                                                                                   }).AddLogger(this.Logger)
+                                                                     .AddSubscriptionDroppedHandler((s,
+                                                                                                     reason,
+                                                                                                     arg3) =>
+                                                                                                    {
+                                                                                                        this.TestsFixture
+                                                                                                            .LogMessageToTrace($"Subscription Dropped {this.TestName}");
+                                                                                                    }).Build();
+
+            // 2. Act
+            // Start the subscription service
+            await subscription.Start(CancellationToken.None);
+
+            await Task.Delay(1000);
+
+            subscription.Stop();
+
+            // 3. Assert
+            eventsDelivered.Count.ShouldNotBe(0);
+            eventsDelivered.Count.ShouldNotBe(eventsToCheck.Count);
+
+            // 4. Cleanup
+
+            eventStoreConnection.Close();
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
+        }
+
+        [Fact]
+        public async Task PersistentSubscriptions_StreamStart_AsExpected()
+        {
+            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
+
+            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
+
+            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
+
+            // Setup the Event Store Connection
+            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
+
+            String aggregateName = "SalesTransactionAggregate";
+            Guid aggregateId = Guid.NewGuid();
+            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
+
+            List<EventData> events = Helper.GenerateEvents(100);
+
+            await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
+
+            PersistentSubscriptionSettings persistentSubscriptionSettings = PersistentSubscriptionSettings.Create().StartFrom(50);
+
+            Int32 eventsProcessed = 0;
+
+            // 2. Act
+            Subscription subscription = PersistentSubscriptionBuilder.Create(streamName, "TestGroup1").UseConnection(eventStoreConnection).AddEventAppearedHandler((@base,
+                                                                                                                                                                    @event) =>
+                                                                                                                                                                   {
+                                                                                                                                                                       eventsProcessed
+                                                                                                                                                                           ++;
+                                                                                                                                                                   })
+                                                                     .DeliverTo(new Uri(this.EndPointUrl))
+                                                                     .WithPersistentSubscriptionSettings(persistentSubscriptionSettings).AddLogger(this.Logger).Build();
+
+            await subscription.Start(CancellationToken.None);
+
+            await Task.Delay(5000);
+
+            eventsProcessed.ShouldBe(50);
+        }
+
+        /// <summary>
         /// Subscriptions the service custom event factory used translated events emitted.
         /// </summary>
         [Fact]
@@ -417,8 +492,6 @@
             eventStoreConnection.Close();
             this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
-
-
 
         /// <summary>
         /// Subscriptions the service optional parameters default persistent subscription created.
@@ -478,14 +551,12 @@
             persistentSubscriptionSettings.MaxRetryCount = maxRetryCount;
 
             // 2. Act
-            Subscription subscription = PersistentSubscriptionBuilder.Create(streamName, groupName)
-                                                                     .UseConnection(eventStoreConnection)
+            Subscription subscription = PersistentSubscriptionBuilder.Create(streamName, groupName).UseConnection(eventStoreConnection)
                                                                      .DeliverTo(new Uri(this.EndPointUrl))
-                                                                     .WithPersistentSubscriptionSettings(persistentSubscriptionSettings)
-                                                                     .AddLogger(this.Logger).Build();
+                                                                     .WithPersistentSubscriptionSettings(persistentSubscriptionSettings).AddLogger(this.Logger).Build();
 
             await subscription.Start(CancellationToken.None);
-             
+
             // 3. Assert
             //TODO: Check this
             await this.CheckSubscriptionHasBeenCreated(streamName, groupName, maxRetryCount, 0);
@@ -638,87 +709,6 @@
         private void SubscriptionService_TraceGenerated(String trace)
         {
             this.TestsFixture.LogMessageToTrace(trace);
-        }
-
-        /// <summary>
-        /// Persistents the subscriptions event delivery event is delivered.
-        /// </summary>
-        [Fact]
-        public async Task PersistentSubscriptions_EventDelivery_StopCalled_NotAllEventsDelivered()
-        {
-            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} started");
-
-            String connectionString = $"ConnectTo=tcp://admin:changeit@127.0.0.1:{this.DockerHelper.EventStoreTcpPort};VerboseLogging=true;";
-
-            this.TestsFixture.LogMessageToTrace($"connectionString is {connectionString}");
-
-            // Setup the Event Store Connection
-            IEventStoreConnection eventStoreConnection = await this.SetupEventStoreConnection(connectionString);
-
-            // 1. Arrange
-            String aggregateName = "SalesTransactionAggregate";
-            Guid aggregateId = Guid.NewGuid();
-            String streamName = $"{aggregateName}-{aggregateId.ToString("N")}";
-
-            List<Guid> eventsToCheck = new List<Guid>();
-            //Int32 expectedVersion = -1;
-
-            List< EventData > events = new List<EventData>();
-
-            //The 2000 could become Inline for ranges?
-            // Setup some dummy events in the Event Store
-            for (Int32 i = 0; i < 2000; i++)
-            {
-                var sale = new
-                           {
-                               AggregateId = aggregateId,
-                               EventId = Guid.NewGuid()
-                           };
-
-                String eventAsString = JsonConvert.SerializeObject(sale);
-                EventData eventData = new EventData(Guid.NewGuid(), "Test", true, Encoding.Default.GetBytes(eventAsString), null);
-
-                events.Add(eventData);
-                
-                //expectedVersion++;
-                eventsToCheck.Add(sale.EventId);
-            }
-
-            await eventStoreConnection.AppendToStreamAsync(streamName, -1, events);
-
-            List<ResolvedEvent> eventsDelivered = new List<ResolvedEvent>();
-
-            // Setup a subscription configuration to deliver the events to the dummy REST
-            Subscription subscription = PersistentSubscriptionBuilder.Create(streamName, "TestGroup1").UseConnection(eventStoreConnection)
-                                                                     .DeliverTo(new Uri(this.EndPointUrl)).AddEventAppearedHandler((@base,
-                                                                                                                                    @event) =>
-                                                                                                                                   {
-                                                                                                                                       eventsDelivered.Add(@event);
-                                                                                                                                       Thread.Sleep(10);
-                                                                                                                                   }).AddLogger(this.Logger)
-                                                                     .AddSubscriptionDroppedHandler((s,
-                                                                                                     reason,
-                                                                                                     arg3) =>
-                                                                                                    {
-                                                                                                        this.TestsFixture.LogMessageToTrace($"Subscription Dropped {this.TestName}");
-                                                                                                    }).Build();
-
-            // 2. Act
-            // Start the subscription service
-            await subscription.Start(CancellationToken.None);
-
-            await Task.Delay(1000);
-
-            subscription.Stop();
-
-            // 3. Assert
-            eventsDelivered.Count.ShouldNotBe(0);
-            eventsDelivered.Count.ShouldNotBe(eventsToCheck.Count);
-
-            // 4. Cleanup
-            
-            eventStoreConnection.Close();
-            this.TestsFixture.LogMessageToTrace($"TestMethod {this.TestName} finished");
         }
 
         #endregion
