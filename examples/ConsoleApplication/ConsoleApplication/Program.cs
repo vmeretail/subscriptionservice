@@ -169,17 +169,14 @@
         {
             HttpClient httpClient = new HttpClient();
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:2113/streams/{stream}/metadata");
-            requestMessage.Headers.Add("Accept", @"application/json");
-            requestMessage.Headers.Add("Content", @"application/json");
+
             requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
 
-            requestMessage.Headers.Add("eventId", Guid.NewGuid().ToString());
-
-            String payload = "[{\"eventId\":\"16768949-8949-8949-8949-159016768949\",\"eventType\":\"truncate\",\"data\":{\"$tb\":5},\"metadata\":{}}]";
+            String payload = "[{\"eventId\":\"16768949-8949-8949-8949-159016768949\",\"eventType\":\"truncate\",\"data\":{\"$tb\":5}}]";
 
             payload = payload.Replace("$tb:5", $"$tb:{truncateBefore}");
 
-            requestMessage.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+            requestMessage.Content = new StringContent(payload, Encoding.UTF8, "application/vnd.eventstore.events+json");
 
             var response = await httpClient.SendAsync(requestMessage, CancellationToken.None);
 
@@ -208,13 +205,6 @@
 
             await eventStoreConnection.ConnectAsync();
 
-            eventStoreConnection.AuthenticationFailed += EventStoreConnection_AuthenticationFailed;
-            eventStoreConnection.Connected += EventStoreConnection_Connected;
-            eventStoreConnection.Reconnecting += EventStoreConnection_Reconnecting;
-            eventStoreConnection.ErrorOccurred += EventStoreConnection_ErrorOccurred;
-            eventStoreConnection.Disconnected += EventStoreConnection_Disconnected;
-            eventStoreConnection.Closed += EventStoreConnection_Closed;
-
             await AddEvents(eventStoreConnection, "Steven-1", 100);
             await AddEvents(eventStoreConnection, "Dave-1", 100);
             await AddEvents(eventStoreConnection, "Stuart-1", 100);
@@ -228,13 +218,16 @@
 
             await Scavenge();
 
-            //Truncate
-
             Thread.Sleep(5000);
 
             await AddEvents(eventStoreConnection, "Dave-1", 10);
 
             await TruncateStreamHttp("$ce-Stuart", 10);
+
+            await Scavenge();
+
+            await AddEvents(eventStoreConnection, "Stuart-2", 10);
+            await AddEvents(eventStoreConnection, "Steven-2", 10);
 
             Console.ReadKey();
 
@@ -258,36 +251,6 @@
             await catchupSubscription.Start(CancellationToken.None);
 
             Console.ReadKey();
-        }
-
-        private static void EventStoreConnection_Closed(object sender, ClientClosedEventArgs e)
-        {
-            Console.WriteLine("EventStoreConnection_Closed");
-        }
-
-        private static void EventStoreConnection_Disconnected(object sender, ClientConnectionEventArgs e)
-        {
-            Console.WriteLine("EventStoreConnection_Disconnected");
-        }
-
-        private static void EventStoreConnection_AuthenticationFailed(object sender, ClientAuthenticationFailedEventArgs e)
-        {
-            Console.WriteLine("EventStoreConnection_AuthenticationFailed");
-        }
-
-        private static void EventStoreConnection_Connected(object sender, ClientConnectionEventArgs e)
-        {
-            Console.WriteLine("Connected");
-        }
-
-        private static void EventStoreConnection_ErrorOccurred(object sender, ClientErrorEventArgs e)
-        {
-            Console.WriteLine("Error");
-        }
-
-        private static void EventStoreConnection_Reconnecting(object sender, ClientReconnectingEventArgs e)
-        {
-            Console.WriteLine("Reconencting");
         }
 
         #endregion
