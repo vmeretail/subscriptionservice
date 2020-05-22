@@ -230,12 +230,14 @@
 
             await StartProjection();
 
-            await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 500);
+            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 500); //this causes the problem!
+            await TruncateStreamHttp("$ce-Steven", 500);
 
             await Scavenge();
             await AddEvents(eventStoreConnection, "Dave-1", 10);
 
             await TruncateStreamHttp("$ce-Stuart", 100);
+           // await TruncateStreamTcp(eventStoreConnection, "$ce-Stuart", 500); //this causes the problem!
 
             await Scavenge();
 
