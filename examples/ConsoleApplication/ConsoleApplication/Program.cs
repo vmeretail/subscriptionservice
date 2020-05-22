@@ -194,7 +194,7 @@
 
             String payload = "[{\"eventId\":\"16768949-8949-8949-8949-159016768949\",\"eventType\":\"truncate\",\"data\":{\"$tb\":5}}]";
 
-            payload = payload.Replace("$tb:5", $"$tb:{truncateBefore}");
+            payload = payload.Replace(":5", $":{truncateBefore}");
 
             requestMessage.Content = new StringContent(payload, Encoding.UTF8, "application/vnd.eventstore.events+json");
 
@@ -230,14 +230,14 @@
 
             await StartProjection();
 
-            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 500); //this causes the problem!
+            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 500); 
             await TruncateStreamHttp("$ce-Steven", 500);
 
             await Scavenge();
             await AddEvents(eventStoreConnection, "Dave-1", 10);
 
             await TruncateStreamHttp("$ce-Stuart", 100);
-           // await TruncateStreamTcp(eventStoreConnection, "$ce-Stuart", 500); //this causes the problem!
+           // await TruncateStreamTcp(eventStoreConnection, "$ce-Stuart", 500); 
 
             await Scavenge();
 
