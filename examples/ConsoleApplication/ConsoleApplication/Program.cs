@@ -111,33 +111,47 @@
                                                            null);
         }
 
-        private static async Task StartProjection()
+        private static async Task ResetProjection(String projection)
+        {
+            var projectionManager = Program.GetProjectionsManager();
+
+            await projectionManager.ResetAsync(projection, GetUserCredentials() );
+
+            Console.WriteLine($"Reseting projection {projection}");
+        }
+
+        private static UserCredentials GetUserCredentials()
+        {
+            return new UserCredentials("admin", "changeit");
+        }
+
+        private static ProjectionsManager GetProjectionsManager()
         {
             IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 2113);
 
-            ProjectionsManager debugProjectionManager = new ProjectionsManager(new ConsoleLogger(), endPoint, TimeSpan.FromSeconds(30), null, "http");
+            return  new ProjectionsManager(new ConsoleLogger(), endPoint, TimeSpan.FromSeconds(30), null, "http");
+        }
+
+        private static async Task StartProjection()
+        {
+            var projectionManager = Program.GetProjectionsManager();
 
             String projection = @"fromStreams('$ce-Steven','$ce-Stuart','$ce-Dave')
                 .when({
                 $init: (s, e) => {
-                           return { stevenCount: 0,stuartCount: 0, daveCount: 0}
+                           return { count: 0}
                        },
       
-                'StevenAddedEvent' : (s, e) => {
-                                         s.stevenCount++;
-                                     },
-      
-                'DaveAddedEvent': (s, e) => {
-                                 s.daveCount++;
-                             },
-                'StuartAddedEvent': (s, e) => {
-                                 s.stuartCount++;
-                             }
+                'AddedEvent' : (s, e) => {
+                                         s.count++;
+                                     }
             })";
 
             try
             {
-                await debugProjectionManager.CreateContinuousAsync("TestProjection1", projection, new UserCredentials("admin", "changeit"));
+                await projectionManager.CreateContinuousAsync("TestProjection1", projection, GetUserCredentials());
+
+                Console.WriteLine($"Starting projection TestProjection1");
             }
             catch
             {
@@ -156,12 +170,18 @@
             requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes("admin:changeit")));
 
             await httpClient.SendAsync(requestMessage, CancellationToken.None);
+
+            Console.WriteLine($"Scavenge started");
+
+            Thread.Sleep(5000);
         }
 
         private static async Task TruncateStreamTcp(IEventStoreConnection eventStoreConnection, String stream,
                                                  Int32 truncateBefore)
         {
             await eventStoreConnection.SetStreamMetadataAsync(stream, -2, StreamMetadata.Create(truncateBefore: truncateBefore));
+
+            Console.WriteLine($"truncate stream tcp {stream}");
         }
 
         private static async Task TruncateStreamHttp(String stream,
@@ -178,11 +198,10 @@
 
             requestMessage.Content = new StringContent(payload, Encoding.UTF8, "application/vnd.eventstore.events+json");
 
-            var response = await httpClient.SendAsync(requestMessage, CancellationToken.None);
+            await httpClient.SendAsync(requestMessage, CancellationToken.None);
 
-            var resposne = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"truncate stream http {stream}");
         }
-
 
         /// <summary>
         /// Defines the entry point of the application.
@@ -205,29 +224,25 @@
 
             await eventStoreConnection.ConnectAsync();
 
-            await AddEvents(eventStoreConnection, "Steven-1", 100);
-            await AddEvents(eventStoreConnection, "Dave-1", 100);
-            await AddEvents(eventStoreConnection, "Stuart-1", 100);
+            await AddEvents(eventStoreConnection, "Steven-1", 1000);
+            await AddEvents(eventStoreConnection, "Dave-1", 1000);
+            await AddEvents(eventStoreConnection, "Stuart-1", 1000);
 
             await StartProjection();
 
-            //TODO: Get the state?
-
-            //Truncate stream 1
-            await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 5);
+            await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 500);
 
             await Scavenge();
-
-            Thread.Sleep(5000);
-
             await AddEvents(eventStoreConnection, "Dave-1", 10);
 
-            await TruncateStreamHttp("$ce-Stuart", 10);
+            await TruncateStreamHttp("$ce-Stuart", 100);
 
             await Scavenge();
 
             await AddEvents(eventStoreConnection, "Stuart-2", 10);
             await AddEvents(eventStoreConnection, "Steven-2", 10);
+
+            await ResetProjection("TestProjection1");
 
             Console.ReadKey();
 
