@@ -226,23 +226,35 @@
 
             await AddEvents(eventStoreConnection, "Steven-1", 1000);
             await AddEvents(eventStoreConnection, "Dave-1", 1000);
-            await AddEvents(eventStoreConnection, "Stuart-1", 1000);
+            //await AddEvents(eventStoreConnection, "Stuart-1", 1000);
 
             await StartProjection();
 
-            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 500); 
-            await TruncateStreamHttp("$ce-Steven", 500);
+            //NOTE: Truncate using the TCP Client
 
-            await Scavenge();
-            await AddEvents(eventStoreConnection, "Dave-1", 10);
+            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 100);                     //works
+            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 101);                     //works
+            await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 110);      //works
+            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 111);      //fails
 
-            await TruncateStreamHttp("$ce-Stuart", 100);
-           // await TruncateStreamTcp(eventStoreConnection, "$ce-Stuart", 500); 
+            //NOTE: Truncate using the HTTP
 
-            await Scavenge();
+            //await TruncateStreamHttp("$ce-Steven", 100); //Works
+            //await TruncateStreamHttp("$ce-Steven", 101); //Works
+            //await TruncateStreamHttp("$ce-Steven", 110); //Works
+            //await TruncateStreamHttp("$ce-Steven", 111); //Fails
 
-            await AddEvents(eventStoreConnection, "Stuart-2", 10);
-            await AddEvents(eventStoreConnection, "Steven-2", 10);
+           // await Scavenge(); //nothing to do with the problem it seems
+
+            //await AddEvents(eventStoreConnection, "Dave-1", 10);
+
+            //await TruncateStreamHttp("$ce-Stuart", 100);
+            // await TruncateStreamTcp(eventStoreConnection, "$ce-Stuart", 500); 
+
+            // await Scavenge(); //nothing to do with the problem it seems
+
+            //await AddEvents(eventStoreConnection, "Stuart-2", 10);
+            //await AddEvents(eventStoreConnection, "Steven-2", 10);
 
             await ResetProjection("TestProjection1");
 
