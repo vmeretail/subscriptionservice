@@ -149,7 +149,7 @@
 
             try
             {
-                await projectionManager.CreateContinuousAsync("TestProjection1", projection, GetUserCredentials());
+                await projectionManager.CreateContinuousAsync("TestProjection1", projection, false,GetUserCredentials());
 
                 Console.WriteLine($"Starting projection TestProjection1");
             }
