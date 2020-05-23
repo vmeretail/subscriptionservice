@@ -132,7 +132,7 @@
             return  new ProjectionsManager(new ConsoleLogger(), endPoint, TimeSpan.FromSeconds(30), null, "http");
         }
 
-        private static async Task StartProjection()
+        private static async Task StartProjection(String projectionName)
         {
             var projectionManager = Program.GetProjectionsManager();
 
@@ -149,7 +149,7 @@
 
             try
             {
-                await projectionManager.CreateContinuousAsync("TestProjection1", projection, false,GetUserCredentials());
+                await projectionManager.CreateContinuousAsync(projectionName, projection, false,GetUserCredentials());
 
                 Console.WriteLine($"Starting projection TestProjection1");
             }
@@ -228,14 +228,14 @@
             await AddEvents(eventStoreConnection, "Dave-1", 1000);
             //await AddEvents(eventStoreConnection, "Stuart-1", 1000);
 
-            await StartProjection();
+            await StartProjection("TestProjection1");
 
             //NOTE: Truncate using the TCP Client
 
             //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 100);                     //works
             //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 101);                     //works
-            await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 110);      //works
-            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 111);      //fails
+            //await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 110);      //works
+            await TruncateStreamTcp(eventStoreConnection, "$ce-Steven", 111);      //fails
 
             //NOTE: Truncate using the HTTP
 
@@ -257,6 +257,8 @@
             //await AddEvents(eventStoreConnection, "Steven-2", 10);
 
             await ResetProjection("TestProjection1");
+
+            await StartProjection("TestProjection2");
 
             Console.ReadKey();
 
