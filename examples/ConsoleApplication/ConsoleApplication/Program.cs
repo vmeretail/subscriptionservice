@@ -256,8 +256,10 @@
             //await AddEvents(eventStoreConnection, "Stuart-2", 10);
             //await AddEvents(eventStoreConnection, "Steven-2", 10);
 
+            //This projection no longer works (all stream position at -1)
             await ResetProjection("TestProjection1");
 
+            //This new projection does not work (all stream position at -1)
             await StartProjection("TestProjection2");
 
             Console.ReadKey();
