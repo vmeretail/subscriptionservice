@@ -3,10 +3,12 @@
     using System;
     using System.Collections.Generic;
     using System.Net.Http;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using EventStore.ClientAPI;
+    using Microsoft.AspNetCore.Mvc.Diagnostics;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Serialization;
@@ -36,29 +38,36 @@
             Int64 checkPointCount = 200;
 
             //This holds our state and event handlers
-            TestProjection projection = new TestProjection();
+            //TestProjection projection = new TestProjection();
 
             //Probably would live inside a Projection class to prevent duplicate
-            var eventAppeared = new Action<EventStoreCatchUpSubscription, ResolvedEvent>((arg1, @event) =>
-                                                                             {
-                                                                                 //TODO filter these events out should be part of the Builder
-                                                                                 if (@event.Event == null) return;
+            //var eventAppeared = new Action<EventStoreCatchUpSubscription, ResolvedEvent>((arg1, @event) =>
+            //                                                                 {
+            //                                                                     //TODO filter these events out should be part of the Builder
+            //                                                                     if (@event.Event == null) return;
 
-                                                                                 if (@event.Event.EventType.StartsWith("$")) return;
+            //                                                                     if (@event.Event.EventType.StartsWith("$")) return;
 
-                                                                                 TestProjection.EventAppeared(arg1, @event, projection);
-                                                                             });
+            //                                                                     TestProjection.EventAppeared(arg1, @event, projection);
+            //                                                                 });
 
-            //NOTE: if we wanted to subscribe to multiple streams, we would create multiple Subscription
-            //but importantly, pass in the same projection.EventAppeared
-            Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-OrganisationAggregate")
+            // projection p  = new projection();
+
+            Projection<OrganisationState> organisationProjection = new OrganisationProjection();
+
+            
+
+             //NOTE: if we wanted to subscribe to multiple streams, we would create multiple Subscription
+             //but importantly, pass in the same projection.EventAppeared
+             Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-OrganisationAggregate")
                                                                   .UseConnection(eventStoreConnection)
                                                                   .SetLastCheckpoint(lastCheckpoint) //Load this from DB
-                                                                  .AddEventAppearedHandler(eventAppeared)
+                                                                  //.AddEventAppearedHandler(eventAppeared)
+                                                                  .AddEventAppearedHandler(organisationProjection.eventAppeared)
                                                                   .AddLiveProcessingStartedHandler(upSubscription =>
                                                                                                    {
                                                                                                        //Just to show the state has been updated as expected
-                                                                                                       projection.OrganisationNames.ForEach(Console.WriteLine);
+                                                                                                       organisationProjection.state.OrganisationNames.ForEach(Console.WriteLine);
                                                                                                    } )
                                                                   .AddLastCheckPointChanged((s,
                                                                                              l) =>
@@ -86,6 +95,68 @@
                                                                                };
 
 
+    }
+
+    public abstract class Projection<TState>
+    {
+        public Action<EventStoreCatchUpSubscription, ResolvedEvent> eventAppeared;
+
+        public TState state;
+
+        protected Projection()
+        {
+            state = (TState)Activator.CreateInstance(typeof(TState), true);
+            eventAppeared = (arg1,
+                             @event) => EventAppeared(arg1, @event);
+        }
+
+
+        public void EventAppeared(EventStoreCatchUpSubscription arg1,
+                                  ResolvedEvent @event)
+        {
+            //TODO: Always deserialise or a faster way of detecting if we have a handler?
+
+            @event.Event.EventType
+
+            if (@event.Event == null) return;
+
+            if (@event.Event.EventType.StartsWith("$")) return;
+
+            Type type = Type.GetType(@event.Event.EventType); //target type
+
+            var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
+
+            JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
+
+            DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
+
+            HandleEvent(domainEvent);
+        }
+
+        protected abstract void HandleEvent(DomainEvent @event);
+    }
+
+    public class OrganisationProjection : Projection<OrganisationState>
+    {
+        protected override void HandleEvent(DomainEvent domainEvent)
+        {
+            HandleEvent((dynamic)domainEvent);
+        }
+
+        public void HandleEvent(Object @event)
+        {
+            Console.WriteLine(":|");
+        }
+
+        public void HandleEvent(OrganisationCreatedEvent @event)
+        {
+            state.OrganisationNames.Add(@event.OrganisationName);
+        }
+    }
+
+    public class OrganisationState
+    {
+        public List<String> OrganisationNames = new List<String>();
     }
 
     public class TestProjection
