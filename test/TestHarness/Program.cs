@@ -35,18 +35,29 @@
             Int64 lastCheckpoint = 0;
             Int64 checkPointCount = 200;
 
-            PercyProjection percyProjection = new PercyProjection(); //this would be of type IProjection
+            //This holds our state and event handlers
+            TestProjection projection = new TestProjection();
 
+            //Probably would live inside a Projection class to preevent duplicate
+            var eventAppeared = new Action<EventStoreCatchUpSubscription, ResolvedEvent>((arg1, @event) =>
+                                                                             {
+                                                                                 if (@event.Event == null) return;
+
+                                                                                 if (@event.Event.EventType.StartsWith("$")) return;
+
+                                                                                 TestProjection.EventAppeared(arg1, @event, projection);
+                                                                             });
+
+            //NOTE: if we wanted to subscribe to multiple streams, we would create multiple Subscription
+            //but importantly, pass in the same projection.EventAppeared
             Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-OrganisationAggregate")
                                                                   .UseConnection(eventStoreConnection)
-                                                                  .SetLastCheckpoint(lastCheckpoint) //DB persistence
-                                                                  .AddEventAppearedHandler(percyProjection.EventAppeared)
+                                                                  .SetLastCheckpoint(lastCheckpoint) //Load this from DB
+                                                                  .AddEventAppearedHandler(eventAppeared)
                                                                   .AddLiveProcessingStartedHandler(upSubscription =>
                                                                                                    {
-                                                                                                       foreach (var org in percyProjection.OrganisationNames)
-                                                                                                       {
-                                                                                                           Console.WriteLine(org);
-                                                                                                       }
+                                                                                                       //Just to show the state has been updated as expected
+                                                                                                       projection.OrganisationNames.ForEach(Console.WriteLine);
                                                                                                    } )
                                                                   .AddLastCheckPointChanged((s,
                                                                                              l) =>
@@ -76,18 +87,9 @@
 
     }
 
-
-    public interface IProjection
-    {
-        void EventAppeared(EventStoreCatchUpSubscription arg1,
-                           ResolvedEvent @event);
-    }
-
-    public class PercyProjection : IProjection
+    public class TestProjection
     {
         public List<String> OrganisationNames = new List<String>();
-
-       // public void EventAppearedGoon(EventStoreCatchUpSubscription arg1, ResolvedEvent @event) => SaveState(EventAppeared(null,default(ResolvedEvent)));
 
 
         private static void SaveState()
@@ -95,21 +97,20 @@
             Console.WriteLine("State saved");
         }
 
-        public void EventAppeared(EventStoreCatchUpSubscription arg1,
-                                   ResolvedEvent @event)
+        public static void EventAppeared(EventStoreCatchUpSubscription arg1,
+                                  ResolvedEvent @event,
+                                  TestProjection projection)
         {
             if (@event.Event == null) return;
 
             if (@event.Event.EventType.StartsWith("$")) return;
-            
+
 
             //Console.WriteLine($"Event appeared {@event.OriginalEventNumber}");
 
             Type type = Type.GetType(@event.Event.EventType); //target type
 
             var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
-
-            var e1 = OrganisationCreatedEvent.Create(AggregateId.CreateNew(), "RAH", DateTime.Now, "", "", "", "", "", "", "", "", null);
 
             JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
 
@@ -123,7 +124,7 @@
                                 {
                                     Console.WriteLine($"OrganisationCreatedEvent appeared");
 
-                                    this.OrganisationNames.Add(e.OrganisationName);
+                                    projection.OrganisationNames.Add(e.OrganisationName);
                                 });
 
                     break;
@@ -131,6 +132,7 @@
 
 
         }
+
 
         private static void  UpdateState(Action a)
         {
