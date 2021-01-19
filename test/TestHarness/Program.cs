@@ -140,30 +140,8 @@
         protected Projection()
         {
             state = (TState)Activator.CreateInstance(typeof(TState), true);
-            eventAppeared = (arg1,
-                             @event) => EventAppeared(arg1, @event);
+            eventAppeared = (arg1, @event) => EventAppeared(arg1, @event);
         }
-
-
-        //public void EventAppeared(EventStoreCatchUpSubscription arg1,
-        //                          ResolvedEvent @event)
-        //{
-        //    //TODO: Always deserialise or a faster way of detecting if we have a handler?
-
-        //    if (@event.Event == null) return;
-
-        //    if (@event.Event.EventType.StartsWith("$")) return;
-
-        //    Type type = Type.GetType(@event.Event.EventType); //target type
-
-        //    var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
-
-        //    JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
-
-        //    DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
-
-        //    HandleEvent(domainEvent);
-        //}
 
         public void EventAppeared(EventStoreCatchUpSubscription arg1, ResolvedEvent @event) => HandleEvent(Convert(@event));
 
@@ -209,64 +187,6 @@
     {
         public List<String> OrganisationNames = new List<String>();
     }
-
-    //public class TestProjection
-    //{
-    //    public List<String> OrganisationNames = new List<String>();
-
-
-    //    private static void SaveState()
-    //    {
-    //        Console.WriteLine("State saved");
-    //    }
-
-    //    public static void EventAppeared(EventStoreCatchUpSubscription arg1,
-    //                              ResolvedEvent @event,
-    //                              TestProjection projection)
-    //    {
-    //        if (@event.Event == null) return;
-
-    //        if (@event.Event.EventType.StartsWith("$")) return;
-
-
-    //        //Console.WriteLine($"Event appeared {@event.OriginalEventNumber}");
-
-    //        Type type = Type.GetType(@event.Event.EventType); //target type
-
-    //        var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
-
-    //        JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
-
-    //        DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
-
-    //        switch (domainEvent)
-    //        {
-    //            case OrganisationCreatedEvent e:
-
-    //                UpdateState(() =>
-    //                            {
-    //                                Console.WriteLine($"OrganisationCreatedEvent appeared");
-
-    //                                projection.OrganisationNames.Add(e.OrganisationName);
-    //                            });
-
-    //                break;
-    //        }
-
-
-    //    }
-
-
-    //    private static void  UpdateState(Action a)
-    //    {
-    //        //TODO: Save state if we reach here (and changes)
-
-    //        a();
-
-    //        SaveState();
-    //    }
-    //}
-
 
     /// <summary>
     /// </summary>
