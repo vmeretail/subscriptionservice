@@ -97,12 +97,40 @@
 
     }
 
-    public abstract class Projection<TState>
+
+    public static class Proj<TState> where TState : new()
+    {
+        public static void HandleEvent(Func<Object> handler) => SaveState( handler );
+
+        public static void SaveState(Func<Object> handler)
+        {
+            var state = handler();
+            Console.WriteLine("State saved");
+        }
+    }
+
+    public static class OrgProj
+    {
+        public static void HandleEvent(Object s, OrganisationCreatedEvent e) =>  
+            Proj<Object>.HandleEvent(() => 
+                                                      OrgProj.HandleEventX(s,e) );
+
+        static Object HandleEventX(Object s,OrganisationCreatedEvent e)
+        {
+            Console.WriteLine("State updated");
+            ((OrganisationState)s).OrganisationNames.Add(e.OrganisationName);
+
+            return s;
+        }
+    }
+
+    public abstract class Projection<TState> where TState : new()
     {
         public Action<EventStoreCatchUpSubscription, ResolvedEvent> eventAppeared;
 
         public TState state;
 
+        //TOOD repo for loading / saving
         protected Projection()
         {
             state = (TState)Activator.CreateInstance(typeof(TState), true);
@@ -116,8 +144,6 @@
         {
             //TODO: Always deserialise or a faster way of detecting if we have a handler?
 
-            @event.Event.EventType
-
             if (@event.Event == null) return;
 
             if (@event.Event.EventType.StartsWith("$")) return;
@@ -130,7 +156,22 @@
 
             DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
 
+            //var state = ((dynamic)this).HandleEventGoon(domainEvent);
+
             HandleEvent(domainEvent);
+
+           // SaveState();
+        }
+
+        protected virtual void SaveState()
+        {
+            //Save to Database
+            //database.SaveChanges(this.state);
+
+            //Load state from stream which always has 1 event (read forward)
+            //Save state to same stream above
+
+            //Enriched events go to the -result stream like we do just now
         }
 
         protected abstract void HandleEvent(DomainEvent @event);
@@ -138,20 +179,31 @@
 
     public class OrganisationProjection : Projection<OrganisationState>
     {
+        public OrganisationProjection()
+        {
+            //TODO Inject a state save dependency?
+        }
+
+        protected override void SaveState()
+        {
+            //Projection specific save state
+        }
+
         protected override void HandleEvent(DomainEvent domainEvent)
         {
             HandleEvent((dynamic)domainEvent);
         }
 
-        public void HandleEvent(Object @event)
+        internal void HandleEvent(Object @event)
         {
-            Console.WriteLine(":|");
+            
         }
 
-        public void HandleEvent(OrganisationCreatedEvent @event)
+        internal void HandleEvent(OrganisationCreatedEvent @event)
         {
-            state.OrganisationNames.Add(@event.OrganisationName);
+            OrgProj.HandleEvent(this.state, @event);
         }
+
     }
 
     public class OrganisationState
