@@ -125,6 +125,11 @@
                                                                   });
     }
 
+    /// <summary>
+    /// Problem I have is trying to get the eventappeared to dynamically call my functional code.
+    /// So Projection<TState> and OrganisationProjection is acting like a router into the functional code.
+    /// </summary>
+    /// <typeparam name="TState">The type of the state.</typeparam>
     public abstract class Projection<TState> where TState : new()
     {
         public Action<EventStoreCatchUpSubscription, ResolvedEvent> eventAppeared;
@@ -140,24 +145,41 @@
         }
 
 
-        public void EventAppeared(EventStoreCatchUpSubscription arg1,
-                                  ResolvedEvent @event)
+        //public void EventAppeared(EventStoreCatchUpSubscription arg1,
+        //                          ResolvedEvent @event)
+        //{
+        //    //TODO: Always deserialise or a faster way of detecting if we have a handler?
+
+        //    if (@event.Event == null) return;
+
+        //    if (@event.Event.EventType.StartsWith("$")) return;
+
+        //    Type type = Type.GetType(@event.Event.EventType); //target type
+
+        //    var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
+
+        //    JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
+
+        //    DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
+
+        //    HandleEvent(domainEvent);
+        //}
+
+        public void EventAppeared(EventStoreCatchUpSubscription arg1, ResolvedEvent @event) => HandleEvent(Convert(@event));
+
+        internal static DomainEvent Convert(ResolvedEvent @event)
         {
-            //TODO: Always deserialise or a faster way of detecting if we have a handler?
+            if (@event.Event == null) return null;
 
-            if (@event.Event == null) return;
-
-            if (@event.Event.EventType.StartsWith("$")) return;
+            if (@event.Event.EventType.StartsWith("$")) return null;
 
             Type type = Type.GetType(@event.Event.EventType); //target type
 
             var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
-
+             
             JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
 
-            DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
-
-            HandleEvent(domainEvent);
+            return (DomainEvent)JsonConvert.DeserializeObject(json, type);
         }
 
         protected abstract void HandleEvent(DomainEvent @event);
@@ -165,13 +187,10 @@
 
     public class OrganisationProjection : Projection<OrganisationState>
     {
-        public OrganisationProjection()
-        {
-            //TODO Inject a state save dependency?
-        }
-
         protected override void HandleEvent(DomainEvent domainEvent)
         {
+            if (domainEvent == null) return;
+
             HandleEvent((dynamic)domainEvent);
         }
 
@@ -184,7 +203,6 @@
         {
             OrgProj.HandleEvent(this.state, @event);
         }
-
     }
 
     public class OrganisationState
