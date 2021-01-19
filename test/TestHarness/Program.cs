@@ -37,32 +37,13 @@
             Int64 lastCheckpoint = 0;
             Int64 checkPointCount = 200;
 
-            //This holds our state and event handlers
-            //TestProjection projection = new TestProjection();
-
-            //Probably would live inside a Projection class to prevent duplicate
-            //var eventAppeared = new Action<EventStoreCatchUpSubscription, ResolvedEvent>((arg1, @event) =>
-            //                                                                 {
-            //                                                                     //TODO filter these events out should be part of the Builder
-            //                                                                     if (@event.Event == null) return;
-
-            //                                                                     if (@event.Event.EventType.StartsWith("$")) return;
-
-            //                                                                     TestProjection.EventAppeared(arg1, @event, projection);
-            //                                                                 });
-
-            // projection p  = new projection();
-
             Projection<OrganisationState> organisationProjection = new OrganisationProjection();
-
-            
 
              //NOTE: if we wanted to subscribe to multiple streams, we would create multiple Subscription
              //but importantly, pass in the same projection.EventAppeared
              Subscription subscription = CatchupSubscriptionBuilder.Create("$ce-OrganisationAggregate")
                                                                   .UseConnection(eventStoreConnection)
                                                                   .SetLastCheckpoint(lastCheckpoint) //Load this from DB
-                                                                  //.AddEventAppearedHandler(eventAppeared)
                                                                   .AddEventAppearedHandler(organisationProjection.eventAppeared)
                                                                   .AddLiveProcessingStartedHandler(upSubscription =>
                                                                                                    {
@@ -97,6 +78,9 @@
 
     public static class ProjectionEventHandler<TState> where TState : new()
     {
+        //Some sorcery here.
+        //When HandleEvent is called, what happens is SaveState is caleld first, with a Func returning the State
+        //This means SaveState is always called off the back of the handler being run.
         public static void HandleEvent(Func<TState> handler) => SaveState( handler );
 
         public static void SaveState(Func<TState> handler)
@@ -111,18 +95,6 @@
                                                           }));
             Console.WriteLine("State saved");
         }
-    }
-
-    public static class OrgProj
-    {
-        public static void HandleEvent(OrganisationState s,
-                                       OrganisationCreatedEvent e) =>
-            ProjectionEventHandler<OrganisationState>.HandleEvent(() =>
-                                                                  {
-                                                                      s.OrganisationNames.Add(e.OrganisationName);
-
-                                                                      return s;
-                                                                  });
     }
 
     /// <summary>
@@ -143,6 +115,7 @@
             eventAppeared = (arg1, @event) => EventAppeared(arg1, @event);
         }
 
+        //NOTE: HandleEvent could become implemented base only, but how would we dynamically make the correct handler calls?
         public void EventAppeared(EventStoreCatchUpSubscription arg1, ResolvedEvent @event) => HandleEvent(Convert(@event));
 
         internal static DomainEvent Convert(ResolvedEvent @event)
@@ -153,7 +126,7 @@
 
             Type type = Type.GetType(@event.Event.EventType); //target type
 
-            var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
+            var json = Encoding.Default.GetString(@event.Event.Data);
              
             JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
 
@@ -163,6 +136,27 @@
         protected abstract void HandleEvent(DomainEvent @event);
     }
 
+
+    public static class OrganisationProjectionExtensions
+    {
+        //NOTE: this is where you implement your handlers.
+        //it probably looks grim, but you want to copy it, change the DomainEvent type and in the () =>
+        //either add your state transformations or call another method from in here (intellisense gives you the choice)
+        public static void HandleEvent(this OrganisationProjection organisationProjection,
+                                       OrganisationState s,
+                                       OrganisationCreatedEvent e) =>
+            ProjectionEventHandler<OrganisationState>.HandleEvent(() =>
+                                                                  {
+                                                                      s.OrganisationNames.Add(e.OrganisationName);
+
+                                                                      return s;
+                                                                  });
+    }
+
+    /// <summary>
+    /// NOTE: this class really is a router between EventAppeared to route through to our handler function
+    /// </summary>
+    /// <seealso cref="TestHarness.Projection{TestHarness.OrganisationState}" />
     public class OrganisationProjection : Projection<OrganisationState>
     {
         protected override void HandleEvent(DomainEvent domainEvent)
@@ -177,10 +171,8 @@
             
         }
 
-        internal void HandleEvent(OrganisationCreatedEvent @event)
-        {
-            OrgProj.HandleEvent(this.state, @event);
-        }
+        //NOTE: Add your handlers here to call through to the static functions
+        internal void HandleEvent(OrganisationCreatedEvent @event) => this.HandleEvent(this.state, @event);
     }
 
     public class OrganisationState
