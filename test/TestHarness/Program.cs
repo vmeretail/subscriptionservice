@@ -80,10 +80,7 @@
                                                                                             .Build();
 
             await subscription.Start(cancellationToken);
-
         }
-
-
 
         public static JsonSerializerSettings GetEventStoreDefaultSettings() => new JsonSerializerSettings()
                                                                                {
@@ -98,30 +95,34 @@
     }
 
 
-    public static class Proj<TState> where TState : new()
+    public static class ProjectionEventHandler<TState> where TState : new()
     {
-        public static void HandleEvent(Func<Object> handler) => SaveState( handler );
+        public static void HandleEvent(Func<TState> handler) => SaveState( handler );
 
-        public static void SaveState(Func<Object> handler)
+        public static void SaveState(Func<TState> handler)
         {
             var state = handler();
+
+            Console.WriteLine(JsonConvert.SerializeObject(state,
+                                                          new JsonSerializerSettings()
+                                                          {
+                                                              TypeNameHandling = TypeNameHandling.None,
+
+                                                          }));
             Console.WriteLine("State saved");
         }
     }
 
     public static class OrgProj
     {
-        public static void HandleEvent(Object s, OrganisationCreatedEvent e) =>  
-            Proj<Object>.HandleEvent(() => 
-                                                      OrgProj.HandleEventX(s,e) );
+        public static void HandleEvent(OrganisationState s,
+                                       OrganisationCreatedEvent e) =>
+            ProjectionEventHandler<OrganisationState>.HandleEvent(() =>
+                                                                  {
+                                                                      s.OrganisationNames.Add(e.OrganisationName);
 
-        static Object HandleEventX(Object s,OrganisationCreatedEvent e)
-        {
-            Console.WriteLine("State updated");
-            ((OrganisationState)s).OrganisationNames.Add(e.OrganisationName);
-
-            return s;
-        }
+                                                                      return s;
+                                                                  });
     }
 
     public abstract class Projection<TState> where TState : new()
@@ -156,22 +157,7 @@
 
             DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
 
-            //var state = ((dynamic)this).HandleEventGoon(domainEvent);
-
             HandleEvent(domainEvent);
-
-           // SaveState();
-        }
-
-        protected virtual void SaveState()
-        {
-            //Save to Database
-            //database.SaveChanges(this.state);
-
-            //Load state from stream which always has 1 event (read forward)
-            //Save state to same stream above
-
-            //Enriched events go to the -result stream like we do just now
         }
 
         protected abstract void HandleEvent(DomainEvent @event);
@@ -182,11 +168,6 @@
         public OrganisationProjection()
         {
             //TODO Inject a state save dependency?
-        }
-
-        protected override void SaveState()
-        {
-            //Projection specific save state
         }
 
         protected override void HandleEvent(DomainEvent domainEvent)
@@ -211,62 +192,62 @@
         public List<String> OrganisationNames = new List<String>();
     }
 
-    public class TestProjection
-    {
-        public List<String> OrganisationNames = new List<String>();
+    //public class TestProjection
+    //{
+    //    public List<String> OrganisationNames = new List<String>();
 
 
-        private static void SaveState()
-        {
-            Console.WriteLine("State saved");
-        }
+    //    private static void SaveState()
+    //    {
+    //        Console.WriteLine("State saved");
+    //    }
 
-        public static void EventAppeared(EventStoreCatchUpSubscription arg1,
-                                  ResolvedEvent @event,
-                                  TestProjection projection)
-        {
-            if (@event.Event == null) return;
+    //    public static void EventAppeared(EventStoreCatchUpSubscription arg1,
+    //                              ResolvedEvent @event,
+    //                              TestProjection projection)
+    //    {
+    //        if (@event.Event == null) return;
 
-            if (@event.Event.EventType.StartsWith("$")) return;
-
-
-            //Console.WriteLine($"Event appeared {@event.OriginalEventNumber}");
-
-            Type type = Type.GetType(@event.Event.EventType); //target type
-
-            var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
-
-            JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
-
-            DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
-
-            switch (domainEvent)
-            {
-                case OrganisationCreatedEvent e:
-
-                    UpdateState(() =>
-                                {
-                                    Console.WriteLine($"OrganisationCreatedEvent appeared");
-
-                                    projection.OrganisationNames.Add(e.OrganisationName);
-                                });
-
-                    break;
-            }
+    //        if (@event.Event.EventType.StartsWith("$")) return;
 
 
-        }
+    //        //Console.WriteLine($"Event appeared {@event.OriginalEventNumber}");
+
+    //        Type type = Type.GetType(@event.Event.EventType); //target type
+
+    //        var json = ASCIIEncoding.Default.GetString(@event.Event.Data);
+
+    //        JsonConvert.DefaultSettings = ProjectionPOC.GetEventStoreDefaultSettings;
+
+    //        DomainEvent domainEvent = (DomainEvent)JsonConvert.DeserializeObject(json, type);
+
+    //        switch (domainEvent)
+    //        {
+    //            case OrganisationCreatedEvent e:
+
+    //                UpdateState(() =>
+    //                            {
+    //                                Console.WriteLine($"OrganisationCreatedEvent appeared");
+
+    //                                projection.OrganisationNames.Add(e.OrganisationName);
+    //                            });
+
+    //                break;
+    //        }
 
 
-        private static void  UpdateState(Action a)
-        {
-            //TODO: Save state if we reach here (and changes)
+    //    }
 
-            a();
 
-            SaveState();
-        }
-    }
+    //    private static void  UpdateState(Action a)
+    //    {
+    //        //TODO: Save state if we reach here (and changes)
+
+    //        a();
+
+    //        SaveState();
+    //    }
+    //}
 
 
     /// <summary>
