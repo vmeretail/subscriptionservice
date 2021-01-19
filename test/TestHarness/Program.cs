@@ -38,9 +38,10 @@
             //This holds our state and event handlers
             TestProjection projection = new TestProjection();
 
-            //Probably would live inside a Projection class to preevent duplicate
+            //Probably would live inside a Projection class to prevent duplicate
             var eventAppeared = new Action<EventStoreCatchUpSubscription, ResolvedEvent>((arg1, @event) =>
                                                                              {
+                                                                                 //TODO filter these events out should be part of the Builder
                                                                                  if (@event.Event == null) return;
 
                                                                                  if (@event.Event.EventType.StartsWith("$")) return;
